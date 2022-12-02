@@ -1,0 +1,18 @@
+####### Linux build #######
+/build_*/
+/build.ninja
+/PKGBUILD
+/AUR/
+/puzzle
+/gmon.out
+/shaders.h
+
+########## Misc ###########
+/TODO
+/stuff/
+/homepage/
+*.swp
+*.cc_
+*.h_
+*~
+

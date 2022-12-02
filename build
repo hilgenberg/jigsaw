@@ -1,0 +1,250 @@
+#!/usr/bin/env python
+import os
+import sys
+import fnmatch
+import shutil
+import subprocess
+
+##############################################################################
+# utility mode to convert data files to linkable sources
+##############################################################################
+
+if len(sys.argv) == 3 and sys.argv[1] == "file2str":
+	# usage: build file2str <var_name>
+	print("const char * " + sys.argv[2] + ' = ');
+	while s := sys.stdin.readline():
+		s = s.replace('\\', "\\\\")
+		s = s.replace('"', "\\\"")
+		print("\"" + s.rstrip() + "\\n\"");
+	print(';\n')
+	sys.exit(0)
+
+if len(sys.argv) == 4 and sys.argv[1] == "bin2str":
+	# usage: build bin2str <var_name> <file_path>
+	print("#include <vector>")
+	print("const std::vector<unsigned char> &" + sys.argv[2] + '() {')
+	print("static const std::vector<unsigned char> data = {")
+	with open(sys.argv[3], 'rb') as f:
+		print(",".join([str(x) for x in f.read()]))
+	print("}; return data; }")
+	sys.exit(0)
+
+##############################################################################
+# configuration
+##############################################################################
+
+target  = 'puzzle'
+libs    = 'z GL GLU GLEW pthread dl'
+
+pch     = "pch.h" # pre-compiled header path (compiled as C++) or None
+shaders = True    # translate all .glsl files to .c code?
+
+# note: cflags are for both C and C++ compiler, ccflags only for C++
+
+# name => additional [cflags, lflags]
+variants = {
+		"debug":   ['-Og -DDEBUG -D_DEBUG -g', ''],
+		"release": ['-O3 -s -DNDEBUG', '-s -zrelro -znow'],
+}
+
+cflags = """-DUSE_PTHREADS
+  -Wall -Wextra
+  -Wno-sign-compare
+  -Wno-deprecated-declarations
+  -Wno-parentheses
+  -Wno-misleading-indentation
+  -Wno-variadic-macros
+  -Wno-unused-parameter
+  -Wno-unknown-pragmas
+  -Wno-implicit-fallthrough
+  -Wno-missing-field-initializers"""
+ccflags = "-std=c++17 -fstrict-enums -Wno-reorder -Wno-class-memaccess"
+lflags  = ""
+
+def getf(cmd):
+	r = subprocess.run(cmd.split(), capture_output=True, text=True)
+	if r.returncode != 0: sys.exit(cmd + " failed!")
+	return r.stdout.strip()
+
+# add pangocairo library (remove unused libs to keep namcap happy)
+cflags += " " + getf('pkg-config --cflags pangocairo')
+lflags += " " + getf('pkg-config --libs   pangocairo').replace("-lharfbuzz","").replace("-lglib-2.0","")
+# add SDL2
+cflags += " " + getf('sdl2-config --cflags')
+lflags += " " + getf('sdl2-config --libs')
+# add dear imgui
+imgui_dir = "imgui"
+imgui_cc  = ["imgui.cpp", "imgui_demo.cpp", "imgui_draw.cpp", "imgui_tables.cpp", 
+	"imgui_widgets.cpp", "backends/imgui_impl_sdl.cpp", "backends/imgui_impl_opengl3.cpp",
+	"misc/cpp/imgui_stdlib.cpp"]
+font      = "Hack-Regular.ttf"
+ccflags  += f" -I{imgui_dir} -I{imgui_dir}/backends"
+
+del getf # done with that
+
+##############################################################################
+# handle cleaning
+##############################################################################
+
+def usage():
+	sys.exit(f"""Usage:
+	build clean: delete all build products
+	build <variant>: switch to variant and build it, variants being:
+		{[v for v in variants]}
+	build: build current variant (debug is default variant)
+
+This will create build_variant directories and symlink the target executable
+and build.ninja from the active variant into the base directory.
+
+The build.ninja files must be regenerated via "build clean" after adding,
+deleting, renaming or moving files around.""")
+
+if len(sys.argv) == 2 and sys.argv[1] == "clean":
+	if os.path.islink("build.ninja"): os.remove("build.ninja")
+	if os.path.islink(target): os.remove(target)
+	if shaders and os.path.exists("shaders.h"): os.remove("shaders.h")
+	for variant in variants:
+		d = "build_" + variant
+		if os.path.exists(d): shutil.rmtree(d)
+	sys.exit(0)
+
+##############################################################################
+# write build.ninja files for all build variants
+##############################################################################
+
+# add $ chars where needed
+lflags += " " + ' '.join(['-l'+s for s in libs.split()])
+cflags  =  cflags.replace("\n", " $\n").replace("\t", " ").strip()
+lflags  =  lflags.replace("\n", " $\n").replace("\t", " ").strip()
+ccflags = ccflags.replace("\n", " $\n").replace("\t", " ").strip()
+
+del libs # done with that
+
+# create/update symlinks for current build variant
+if len(sys.argv) == 2 and sys.argv[1] in variants:
+	d = 'build_' + sys.argv[1]
+	if os.path.islink("build.ninja"): os.remove("build.ninja")
+	if os.path.islink(target): os.remove(target)
+	if not os.path.exists("build.ninja"):
+		os.symlink(d + "/build.ninja", "build.ninja")
+	if not os.path.exists(target):
+		os.symlink(d + "/"+target, target)
+elif len(sys.argv) != 1:
+	usage()
+elif not os.path.lexists("build.ninja") and not os.path.lexists(target):
+	os.symlink("build_debug/build.ninja", "build.ninja")
+	os.symlink("build_debug/"+target, target)
+
+# write the build.ninja files
+for variant,flags in variants.items():
+	base = "build_" + variant
+	file = os.path.join(base, "build.ninja")
+	if os.path.lexists(file): continue
+	if not os.path.exists(base): os.mkdir(base)
+	with open(file, "w") as f:
+		stdout = sys.stdout
+		sys.stdout = f
+		
+		pch_flags = "" if not pch else f" -I{base} -include {pch}.pch.h -Winvalid-pch"
+
+		print(f"""#auto-generated by ./build, delete to regenerate.
+
+builddir = {base}
+
+cflags = {cflags} {flags[0]}
+
+ccflags = $cflags {ccflags}
+
+lflags = {lflags} {flags[1]}
+
+rule gl
+  command = ./build file2str $name <$in >$out
+  description = \033[32mGL\033[m $in
+
+rule ttf
+  command = ./build bin2str $name $in >$out
+  description = \033[32mTTF\033[m $in
+
+rule cc
+  command = g++ -MD -MF $out.dep $ccflags{pch_flags} -c $in -o $out
+  depfile = $out.dep
+  deps = gcc
+  description = \033[32mCC\033[m $in
+
+rule cc_no_pch
+  command = g++ -MD -MF $out.dep $ccflags -c $in -o $out
+  depfile = $out.dep
+  deps = gcc
+  description = \033[32mCC\033[m $in
+
+rule c
+  command = gcc -MD -MF $out.dep $cflags -c $in -o $out
+  depfile = $out.dep
+  deps = gcc
+  description = \033[32mC \033[m $in
+
+rule pch
+  command = g++ -MD -MF $out.dep $ccflags -x c++-header -c $in -o $out
+  depfile = $out.dep
+  deps = gcc
+  description = \033[32mHH\033[m $in
+
+rule link
+  command = g++ $lflags $in -o $out
+  description = \033[32mLL\033[m $out
+
+""")
+
+		PCH_DEP = ""
+		if pch is not None:
+			print(f"build {base}/{pch}.pch.h.gch: pch {pch}")
+			PCH_DEP = f" || {base}/{pch}.pch.h.gch"
+
+		# find all files to compile
+		obj = []
+		glsl = []
+		for R,D,F in os.walk('.'):
+			if "stuff" in D: D.remove("stuff")
+			if ".git" in D: D.remove(".git")
+			for v in variants:
+				if f"build_{v}" in D: D.remove(f"build_{v}")
+
+			for f in fnmatch.filter(F, '*.cc'):
+				print(f"build {base}/{f}.o: cc {os.path.join(R, f)}{PCH_DEP}")
+				obj.append(f"{base}/{f}.o")
+			if shaders:
+				for f in fnmatch.filter(F, '*.glsl'):
+					name = os.path.basename(f).split('.')[0]
+					print(f"build {base}/{f}.cc: gl {os.path.join(R, f)}")
+					print(f"  name = {name}")
+					print(f"build {base}/{f}.o: cc {base}/{f}.cc{PCH_DEP}")
+					obj.append(f"{base}/{f}.o")
+					glsl.append(name)
+
+		print(f"build {base}/font_data.cc: ttf {font}")
+		print(f"  name = font_data")
+		print(f"build {base}/font_data.o: cc {base}/font_data.cc{PCH_DEP}")
+		obj.append(f"{base}/font_data.o")
+
+		for f in imgui_cc:
+				f0 = os.path.basename(f)
+				print(f"build {base}/{f0}.o: cc_no_pch {os.path.join(imgui_dir, f)}")
+				obj.append(f"{base}/{f0}.o")
+
+		print(f"build {base}/{target}: link {' '.join(obj)}")
+
+		if not os.path.lexists("shaders.h") and glsl:
+			with open("shaders.h", "w") as sf:
+				print("// auto-generated by ./build", file=sf);
+				for s in glsl:
+					print(f"extern const char * {s};", file=sf);
+
+		sys.stdout = stdout
+
+
+##############################################################################
+# build the active variant
+##############################################################################
+
+os.system("TERM=dumb ninja")
+
