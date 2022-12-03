@@ -12,6 +12,10 @@
 #include <cassert>
 #include <algorithm>
 #include "OpenGL/GL_AAMode.h"
+#include <SDL_mixer.h>
+
+extern const std::vector<unsigned char> &click_data();
+static Mix_Chunk *click_wav = NULL;
 
 extern volatile bool quit;
 
@@ -25,9 +29,19 @@ PlotWindow::PlotWindow(SDL_Window* window, GL_Context &context, Document &doc)
 , need_redraw(true)
 , window(window)
 , doc(doc)
+, drag_v(0.0, 0.0)
 {
+	if (!click_wav)
+	{
+		auto &sd = click_data();
+		SDL_RWops *io = SDL_RWFromConstMem((const void*)sd.data(), (int)sd.size());
+		if (io) click_wav = Mix_LoadWAV_RW(io, true);
+	}
 }
-PlotWindow::~PlotWindow(){ }
+PlotWindow::~PlotWindow()
+{
+	if (click_wav) { Mix_FreeChunk(click_wav); click_wav = NULL; }
+}
 
 void PlotWindow::start_animations() { if (tnf <= 0.0) last_frame = tnf = now(); }
 
@@ -50,7 +64,6 @@ void PlotWindow::animate()
 	last_frame = t;
 
 	double dx = 0.0, dy = 0.0, dz = 0.0;
-	int idx = 0, idy = 0, idz = 0;
 	std::set<int> params;
 
 	for (auto &i : ikeys)
@@ -61,33 +74,44 @@ void PlotWindow::animate()
 		
 		switch (i.first)
 		{
-			case SDLK_LEFT:  --idx; dx -= inertia; break;
-			case SDLK_RIGHT: ++idx; dx += inertia; break;
-			case SDLK_UP:    --idy; dy -= inertia; break;
-			case SDLK_DOWN:  ++idy; dy += inertia; break;
-			case SDLK_PLUS:  ++idz; dz += inertia; break;
-			case SDLK_MINUS: --idz; dz -= inertia; break;
+			case SDLK_LEFT:  dx -= inertia; break;
+			case SDLK_RIGHT: dx += inertia; break;
+			case SDLK_UP:    dy -= inertia; break;
+			case SDLK_DOWN:  dy += inertia; break;
+			case SDLK_PLUS:  dz += inertia; break;
+			case SDLK_MINUS: dz -= inertia; break;
 			default: assert(false); break;
 		}
 	}
 
-	double f = dt * 100.0;
+	double f = dt * 400.0;
+	dx *= f; dy *= f; dz *= f;
+
+	SDL_Keymod m = SDL_GetModState();
+	bool shift   = (m & (KMOD_LSHIFT|KMOD_RSHIFT));
+	
+	if (shift)
 	{
-		dx *= f; dy *= f; dz *= f;
-
-		SDL_Keymod m = SDL_GetModState();
-		bool shift   = (m & (KMOD_LSHIFT|KMOD_RSHIFT));
-		
-		if (shift)
-		{
-			dz = absmax(dx, dy);
-			dx = dy = 0.0;
-		}
-
-		translate(dx, dy, dz);
+		dz = absmax(dx, dy);
+		dx = dy = 0.0;
 	}
 
-	if (ikeys.empty())
+	if (dragging >= 0)
+	{
+		dx -= drag_v.x*f;
+		dy -= drag_v.y*f;
+	}
+	translate(dx, dy, dz);
+
+	if (dragging >= 0)
+	{
+		int mx = -1, my = -1; SDL_GetMouseState(&mx, &my);
+		doc.drag(dragging, drag_rel, mx, my, drag_v);
+	}
+
+	doc.puzzle.animate(dt);
+
+	if (ikeys.empty() && (dragging < 0 || drag_v.absq() < 1e-12) && doc.puzzle.animations.empty())
 	{
 		tnf = -1.0;
 		return;
@@ -122,42 +146,54 @@ bool PlotWindow::handle_event(const SDL_Event &e)
 		case SDL_KEYUP:
 			return handle_key(e.key.keysym, e.type == SDL_KEYUP);
 
+		case SDL_MOUSEBUTTONDOWN:
+			if (e.button.button != SDL_BUTTON_LEFT) return true;
+			dragging = doc.hit_test(e.button.x, e.button.y, true, drag_rel);
+			redraw();
+			return true;
+		case SDL_MOUSEBUTTONUP:
+			if (e.button.button != SDL_BUTTON_LEFT) return true;
+			if (dragging >= 0)
+			{
+				bool c = doc.drop(dragging);
+				if (c && click_wav)
+				{
+					Mix_PlayChannel(0, click_wav, 0);
+				}
+			}
+			dragging = -1; drag_v.clear();
+			redraw();
+			return true;
 		case SDL_MOUSEMOTION:
 		{
 			auto buttons = e.motion.state;
+			//static int i = 0; ++i; i %=10;
+			//std::cout << i << "B " << buttons << std::endl;
 			if (!(buttons & (SDL_BUTTON_LMASK|SDL_BUTTON_RMASK|SDL_BUTTON_MMASK))) return true;
 			
-			double dx = e.motion.xrel, dy = -e.motion.yrel, dz = 0.0;
 			if (dragging >= 0)
 			{
-				doc.drag(dragging, dx, -dy);
+				doc.drag(dragging, drag_rel, e.motion.x, e.motion.y, drag_v);
 				redraw();
+				if (drag_v.absq() > 1e-12) start_animations();
 				return true;
 			}
+
+			double dx = -e.motion.xrel, dy = -e.motion.yrel, dz = 0.0;
+			drag_v.clear();
 
 			SDL_Keymod m = SDL_GetModState();
 			bool shift   = (m & (KMOD_LSHIFT|KMOD_RSHIFT));
 			
 			if (shift)
 			{
-				dz = absmax(dx, dy);
+				dz = absmax(dx, -dy);
 				dx = dy = 0.0;
 			}
 
 			translate(dx, dy, dz);
 			return true;
 		}
-		case SDL_MOUSEBUTTONDOWN:
-			if (!(e.button.button & SDL_BUTTON_LEFT)) return true;
-			dragging = doc.hit_test(e.button.x, e.button.y);
-			redraw();
-			return true;
-		case SDL_MOUSEBUTTONUP:
-			if (!(e.button.button & SDL_BUTTON_LEFT)) return true;
-			if (dragging >= 0) doc.drop(dragging);
-			dragging = -1;
-			redraw();
-			return true;
 		case SDL_MOUSEWHEEL:
 		{
 			SDL_Keymod m = SDL_GetModState();
@@ -165,7 +201,7 @@ bool PlotWindow::handle_event(const SDL_Event &e)
 
 			if (e.wheel.preciseX != e.wheel.x || e.wheel.preciseY != e.wheel.y)
 			{
-				double dx = -5.0*e.wheel.preciseX, dy = -5.0*e.wheel.preciseY, dz = 0.0;
+				double dx = 5.0*e.wheel.preciseX, dy = -5.0*e.wheel.preciseY, dz = 0.0;
 
 				int mx = -1, my = -1; SDL_GetMouseState(&mx, &my);
 
@@ -176,6 +212,9 @@ bool PlotWindow::handle_event(const SDL_Event &e)
 				}
 
 				translate(10.0*dx, 10.0*dy, dz, mx, my);
+
+				if (dragging >= 0)
+					doc.drag(dragging, drag_rel, mx, my, drag_v);
 			}
 			else
 			{
@@ -222,11 +261,13 @@ bool PlotWindow::handle_key(SDL_Keysym keysym, bool release)
 			if (ctrl) doc.arrange();
 			else doc.reset_view();
 			redraw();
+			start_animations();
 			break;
 		case SDLK_e:
 			doc.arrange_edges();
 			doc.reset_view();
 			redraw();
+			start_animations();
 			break;
 	}
 	else switch (key)
@@ -265,7 +306,7 @@ void PlotWindow::draw()
 
 void PlotWindow::translate(double dx, double dy, double dz, int mx, int my)
 {
-	if (fabs(dx) < 1e-8 && fabs(dy) < 1e-8 && fabs(dz) < 1e-8) return;
+	//if (fabs(dx) < 1e-8 && fabs(dy) < 1e-8 && fabs(dz) < 1e-8) return;
 	doc.camera.translate(dx, dy, dz, mx, my);
 	redraw();
 }

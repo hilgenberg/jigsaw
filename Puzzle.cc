@@ -8,15 +8,54 @@ Puzzle::Puzzle()
 
 void Puzzle::save(Serializer &s) const
 {
-	s.uint32_(W);
-	s.uint32_(H);
+	s.uint32_(W); s.uint32_(H);
+	s.float_(sx); s.float_(sy);
+	for (auto v : ev) s.bool_(v);
+	for (auto v : eh) s.bool_(v);
+	for (int i = 0; i < N; ++i)
+	{
+		s.float_(pos[i].x);
+		s.float_(pos[i].y);
+		s.int32_(g[i]);
+		s.int32_(z[i]);
+	}
 }
 void Puzzle::load(Deserializer &s)
 {
 	uint32_t u;
+	int32_t  k;
 	s.uint32_(u); W = u;
 	s.uint32_(u); H = u;
 	N = W*H;
+	s.float_(sx);
+	s.float_(sy);
+
+	g.resize(N);
+	pos.resize(N);
+	borders.resize(N);
+	z.resize(N);
+
+	bool b;
+	ev.resize(H*(W-1)); for (auto v : ev) { s.bool_(b); v = b; }
+	eh.resize(W*(H-1)); for (auto v : eh) { s.bool_(b); v = b; }
+	int g_max = -1;
+	for (int i = 0; i < N; ++i)
+	{
+		s.float_(pos[i].x);
+		s.float_(pos[i].y);
+		s.int32_(k); g[i] = k; if (k > g_max) g_max = k;
+		s.int32_(k); z[i] = k;
+
+		int x = i % W, y = i / W;
+		int l = (x ==  0  ? 0 : 1+ev[y*(W-1) + x-1]);
+		int r = (x == W-1 ? 0 : 2-ev[y*(W-1) + x  ]);
+		int t = (y ==  0  ? 0 : 1+eh[(y-1)*W + x  ]);
+		int b = (y == H-1 ? 0 : 2-eh[y*W     + x  ]);
+		borders[i] = l | (r << 2) | (t << 4) | (b << 6);
+	}
+	groups.clear();
+	groups.resize(g_max+1);
+	for (int i = 0; i < N; ++i) if (g[i] >= 0) groups[g[i]].insert(i);
 }
 
 void Puzzle::reset(double W0, double H0, int N0)
@@ -141,18 +180,65 @@ void Puzzle::pick_up(Piece i)
 	sanity_checks();
 }
 
-void Puzzle::move(Piece i, const P2f &p)
+void Puzzle::move(Piece i, const P2f &p, bool animate)
 {
 	assert(i >= 0 && i < N);
-	pos[i] = p;
-	// move i's group along with it
-	if (g[i] >= 0) for (Piece j : groups[g[i]])
-		pos[j] = pos[i] - P2f(i%W - j%W, i/W - j/W);
+	if (!animate)
+	{
+		animations.erase(i);
+		pos[i] = p;
+		// move i's group along with it
+		if (g[i] >= 0) for (Piece j : groups[g[i]])
+		{
+			animations.erase(j);
+			pos[j] = pos[i] - P2f(i%W - j%W, i/W - j/W);
+		}
+	}
+	else
+	{
+		if (g[i] >= 0) for (Piece j : groups[g[i]]) if (j != i) animations.erase(j);
+		auto &a = animations[i];
+		a.dest = p; // but leave v as it is, if a already existed
+	}
+}
+
+void Puzzle::animate(double dt)
+{
+	//std::cout << "anim " << animations.size() << ", "  << dt << std::endl;
+	for (auto it = animations.begin(); it != animations.end();)
+	{
+		Piece i = it->first;
+		Anim &a = it->second;
+		for (int k = 5; k >= 0; --k)
+		{
+			pos[i] += a.v * dt;
+			float dq = (pos[i]-a.dest).absq();
+			if (dq < std::max(0.01, a.v.absq()*dt))
+			{
+				it = animations.erase(it);
+				pos[i] = a.dest;
+				break;
+			}
+			else if (k == 0)
+				++it;
+			
+			P2f dx = a.dest - pos[i]; 
+			a.v += dx*dt;
+
+			// dampen lateral movement, so we don't get orbits
+			dx.to_unit();
+			a.v -= (a.v - dx*(a.v*dx)) * 0.1;
+		}
+
+		if (g[i] >= 0) for (Piece j : groups[g[i]])
+			pos[j] = pos[i] - P2f(i%W - j%W, i/W - j/W);
+	}
 }
 
 bool Puzzle::connect(Piece i, float delta_max)
 {
 	assert(i >= 0 && i < N);
+	assert(!animations.count(i));
 
 	// check for new connections
 	std::set<Piece> adding;
@@ -221,6 +307,7 @@ bool Puzzle::connect(Piece i, float delta_max)
 		{
 			// put into exact location
 			pos[j] = pos[i] - P2f(i%W - j%W, i/W - j/W);
+			animations.erase(j);
 
 			// and recursion
 			int x = j % W, y = j / W;

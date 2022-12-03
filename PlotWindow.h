@@ -36,6 +36,8 @@ protected:
 	FPSCounter  fps;
 	bool        need_redraw;
 	int         dragging = -1;
+	P2d         drag_v; // move camera while dragging piece to the edge?
+	P2f         drag_rel; // where is the mouse inside the dragged piece?
 
 	std::map<SDL_Keycode, double> ikeys; // pressed key -> inertia
 	std::set<SDL_Keycode> keys; // pressed keys

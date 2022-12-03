@@ -87,7 +87,7 @@ static bool zlibDeflate(const std::vector<unsigned char> &in, std::vector<unsign
 
 Serializer::Serializer(ByteWriter &f) : ver(CURRENT_VERSION), f(f)
 {
-	marker_("PUZL");
+	marker_("PUZZLE");
 	uint32_(ver);
 }
 
@@ -174,16 +174,16 @@ void Serializer::object_(const Serializable *x)
 
 Deserializer::Deserializer(ByteReader &f) : f(f)
 {
-	marker_("PUZL");
+	marker_("PUZZLE");
 	uint32_(ver);
 	if (ver < FILE_VERSION_1_0)
 	{
-		throw std::runtime_error("Invalid version info read. This file is not a cplot file or corrupted.");
+		throw std::runtime_error("Invalid version info read. Save game seems corrupted.");
 	}
 	if (ver > CURRENT_VERSION)
 	{
 		std::ostringstream s;
-		s << "This file was written by a newer version of CPlot. It requires at least version " << version_string(ver) << " to read it.";
+		s << "This file was written by a newer version. It requires at least version " << version_string(ver) << " to read it.";
 		throw std::runtime_error(s.str());
 	}
 }

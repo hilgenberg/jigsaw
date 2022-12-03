@@ -4,31 +4,36 @@
 #include "OpenGL/GL_Image.h"
 #include "OpenGL/GL_Color.h"
 #include <string>
+#include "Persistence/Serializer.h"
 
-struct Document
+struct Document : public Serializable
 {
-	Document(const std::string &im_path, int n = -1);
+	Document();
 	~Document();
+
+	void load(const std::string &im_path, int n = -1);
+
+	void save(Serializer &s) const;
+	void load(Deserializer &s);
 
 	void draw();
 
-	void load(const std::string &path);
-	void saveAs(const std::string &path) const;
-
-	int hit_test(int mx, int my, bool pick_up = true);
-	void drag(int piece, int dx, int dy);
-	void drop(int piece);
+	int hit_test(int mx, int my, bool pick_up, P2f &rel);
+	void drag(int piece, const P2f &rel, int mx, int my, P2d &v);
+	bool drop(int piece);
 	
 	void reset_view();
 	void arrange();
 	void arrange_edges();
 
+	Puzzle      puzzle;
+	Camera      camera;
+	GL_Color    bg;
+	GL_Image    im;
+	std::string im_path;
 
-	Puzzle   puzzle;
-	Camera   camera;
-	GL_Color bg;
-	GL_Image im;
-
-protected:
+private:
+	void init();
+	void free_all();
 };
 

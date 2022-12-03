@@ -4,6 +4,7 @@
 #include "GUI.h"
 #include <SDL.h>
 #include <SDL_opengl.h>
+#include <SDL_mixer.h>
 
 volatile bool quit = false;
 static void signalHandler(int)
@@ -12,34 +13,113 @@ static void signalHandler(int)
 	SDL_PushEvent(&e);
 }
 
+static int usage(const char *arg0)
+{
+	for (const char *s = arg0; *s; ++s) if (*s == '/') arg0 = s+1;
+	printf("Usage: %s [IMAGE FILE] [NUMBER OF PIECES]\n", arg0);
+	return 1;
+}
+
+static bool load(Document &doc, const char *file, int n = -1)
+{
+	if (file)
+	{
+		std::filesystem::path p(file);
+		p = absolute(p);
+
+		try
+		{
+			doc.load(p.c_str(), n);
+		}
+		catch (...)
+		{
+			return false;
+		}
+		return true;
+	}
+	std::filesystem::path p = Preferences::directory();
+	if (!is_directory(p)) return false;
+	p /= "state";
+	if (!is_regular_file(p)) return false;
+
+	FILE *F = fopen(p.c_str(), "r");
+	if (!F)
+	{
+		//fprintf(stderr, "cannot read from config file %s!\n", cf.c_str());
+		return false;
+	}
+	try
+	{
+		FileReader fr(F);
+		Deserializer s(fr);
+		doc.load(s);
+		assert(s.done());
+	}
+	catch (...)
+	{
+		fclose(F);
+		return false;
+	}
+	fclose(F);
+	return true;
+}
+static bool save(Document &doc)
+{
+	std::filesystem::path p = Preferences::directory();
+	if (!is_directory(p)) return false;
+	p /= "state";
+
+	FILE *F = fopen(p.c_str(), "w");
+	if (!F)
+	{
+		fprintf(stderr, "cannot write to savegame file %s!\n", p.c_str());
+		return false;
+	}
+
+	try
+	{
+		FileWriter fw(F);
+		Serializer s(fw);
+		doc.save(s);
+	}
+	catch (...)
+	{
+		fclose(F);
+		return false;
+	}
+	fclose(F);
+	return true;
+}
+
 int main(int argc, char *argv[])
 {
-	const char *arg0 = argv[0]; // program name without path
-	for (const char *s = arg0; *s; ++s) if (*s == '/') arg0 = s+1;
-	const char *file_arg = NULL, *num_arg = NULL;
-	
-	if (argc > 3 || (argc == 2 && (!strcasecmp(argv[1], "--help") || !strcmp(argv[1], "-h"))))
-	{
-		printf("Usage: %s [IMAGE FILE] [NUMBER OF PIECES]\n", arg0);
-		return 1;
-	}
-	if (argc >= 2) file_arg = argv[1];
-	if (argc >= 3) num_arg = argv[2];
+	Preferences::reset();
 
+	const char *file_arg = NULL;
 	int n = -1;
-	if (num_arg)
+
+	for (int i = 1; i < argc; ++i)
 	{
-		char *ep = NULL;//&const_cast<char*>(num_arg);
-		n = strtol(num_arg, &ep, 10);
-		if (!*num_arg || *ep)
+		const char *s = argv[i];
+		if (n < 0 && is_int(s, n))
 		{
-			fprintf(stderr, "Invalid number of pieces: %s\n", num_arg);
-			return -1;
+			if (n <= 0)
+			{
+				printf("Number of pieces must be positive\n");
+				return 1;
+			}
+		}
+		else if (!file_arg)
+		{
+			file_arg = s;
+		}
+		//if (!strcasecmp(s, "--help") || !strcmp(s, "-h")) return usage(argv[0]);
+		else
+		{
+			return usage(argv[0]);
 		}
 	}
-	if (!file_arg) file_arg = "test.jpg";
 
-	Preferences::reset();
 	
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(struct sigaction));
@@ -49,7 +129,7 @@ int main(int argc, char *argv[])
 	sigaction(SIGQUIT, &sa, 0);
 	sigaction(SIGTERM, &sa, 0);
 
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) != 0)
 	{
 		fprintf(stderr, "Error: %s\n", SDL_GetError());
 		return -1;
@@ -71,6 +151,12 @@ int main(int argc, char *argv[])
 	SDL_GL_MakeCurrent(window, gl_context);
 	SDL_GL_SetSwapInterval(Preferences::vsync());
 
+	//Initialize SDL_mixer
+	if (Mix_OpenAudio(MIX_DEFAULT_FREQUENCY, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, 512) < 0)
+	{
+		fprintf(stderr, "SDL audio error: %s\n", Mix_GetError());
+	}
+
 	if (glewInit() != GLEW_OK)
 	{
 		fprintf(stderr, "GLEW init failed!\n");
@@ -83,10 +169,18 @@ int main(int argc, char *argv[])
 	GL_CHECK;
 
 	int retcode = 0;
+	Document doc;
 
 	try
 	{
-		Document doc(file_arg, n);
+		if (!load(doc, file_arg, n))
+		#ifdef DEBUG
+		if (!load(doc, "test.jpg", n))
+		#endif
+		{
+			throw std::runtime_error("File not found");
+		}
+
 		GL_CHECK;
 		GL_Context context(gl_context);
 		PlotWindow w(window, context, doc);
@@ -140,14 +234,17 @@ int main(int argc, char *argv[])
 	}
 	catch(std::exception &e)
 	{
-		fprintf(stderr, "%s: %s\n", arg0, e.what());
+		fprintf(stderr, "%s\n", e.what());
 		retcode = 2;
 	}
 
 	SDL_GL_DeleteContext(gl_context);
 	SDL_DestroyWindow(window);
+	Mix_CloseAudio();
+	Mix_Quit();
 	SDL_Quit();
 	
+	save(doc);
 	Preferences::flush();
 
 	return retcode;

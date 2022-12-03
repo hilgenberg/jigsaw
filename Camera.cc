@@ -110,7 +110,7 @@ void Camera::translate(double dx, double dy, double dz, int mx, int my)
 	dx *= pixel;
 	dy *= pixel;
 	{
-		move(-dx, dy);
+		move(dx, dy);
 
 		// zoom with dz, but keep (mx,my) where it is
 		double x0 = 2.0 * mx / (w-1) - 1.0; // [-1,1]

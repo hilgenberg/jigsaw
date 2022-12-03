@@ -72,15 +72,21 @@ lflags += " " + getf('pkg-config --libs   pangocairo').replace("-lharfbuzz","").
 # add SDL2
 cflags += " " + getf('sdl2-config --cflags')
 lflags += " " + getf('sdl2-config --libs')
+cflags += " " + getf('pkg-config --cflags SDL2_mixer')
+lflags += " " + getf('pkg-config --libs   SDL2_mixer')
 # add dear imgui
 imgui_dir = "imgui"
 imgui_cc  = ["imgui.cpp", "imgui_demo.cpp", "imgui_draw.cpp", "imgui_tables.cpp", 
 	"imgui_widgets.cpp", "backends/imgui_impl_sdl.cpp", "backends/imgui_impl_opengl3.cpp",
 	"misc/cpp/imgui_stdlib.cpp"]
-font      = "Hack-Regular.ttf"
 ccflags  += f" -I{imgui_dir} -I{imgui_dir}/backends"
-
 del getf # done with that
+
+data_files = [
+	['font', 'data/Hack-Regular.ttf'],
+	['click', 'data/click.wav'],
+]
+
 
 ##############################################################################
 # handle cleaning
@@ -161,9 +167,9 @@ rule gl
   command = ./build file2str $name <$in >$out
   description = \033[32mGL\033[m $in
 
-rule ttf
+rule data
   command = ./build bin2str $name $in >$out
-  description = \033[32mTTF\033[m $in
+  description = \033[32mBIN\033[m $in
 
 rule cc
   command = g++ -MD -MF $out.dep $ccflags{pch_flags} -c $in -o $out
@@ -221,10 +227,11 @@ rule link
 					obj.append(f"{base}/{f}.o")
 					glsl.append(name)
 
-		print(f"build {base}/font_data.cc: ttf {font}")
-		print(f"  name = font_data")
-		print(f"build {base}/font_data.o: cc {base}/font_data.cc{PCH_DEP}")
-		obj.append(f"{base}/font_data.o")
+		for f in data_files:
+			print(f"build {base}/{f[0]}_data.cc: data {f[1]}")
+			print(f"  name = {f[0]}_data")
+			print(f"build {base}/{f[0]}_data.o: cc {base}/{f[0]}_data.cc{PCH_DEP}")
+			obj.append(f"{base}/{f[0]}_data.o")
 
 		for f in imgui_cc:
 				f0 = os.path.basename(f)
