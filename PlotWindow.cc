@@ -62,9 +62,8 @@ void PlotWindow::animate()
 
 	double dt = std::min(std::max(1e-42, t - last_frame), 0.25);
 	last_frame = t;
-
+	
 	double dx = 0.0, dy = 0.0, dz = 0.0;
-	std::set<int> params;
 
 	for (auto &i : ikeys)
 	{
@@ -101,7 +100,8 @@ void PlotWindow::animate()
 		dx -= drag_v.x*f;
 		dy -= drag_v.y*f;
 	}
-	translate(dx, dy, dz);
+	doc.camera.translate(dx, dy, dz);
+	redraw();
 
 	if (dragging >= 0)
 	{
@@ -147,10 +147,29 @@ bool PlotWindow::handle_event(const SDL_Event &e)
 			return handle_key(e.key.keysym, e.type == SDL_KEYUP);
 
 		case SDL_MOUSEBUTTONDOWN:
+		{
 			if (e.button.button != SDL_BUTTON_LEFT) return true;
+			SDL_Keymod m = SDL_GetModState();
+			bool shift   = (m & (KMOD_LSHIFT|KMOD_RSHIFT));
+			bool ctrl    = (m & (KMOD_LCTRL|KMOD_RCTRL));
+			bool alt     = (m & (KMOD_LALT|KMOD_RALT));
+
+			if (alt && !shift && !ctrl)
+			{
+				dragging = -1;
+				return true;
+			}
+
 			dragging = doc.hit_test(e.button.x, e.button.y, true, drag_rel);
+			if (dragging >= 0 && ctrl)
+			{
+				doc.hide(dragging, alt||shift);
+				start_animations();
+				dragging = -2;
+			}
 			redraw();
 			return true;
+		}
 		case SDL_MOUSEBUTTONUP:
 			if (e.button.button != SDL_BUTTON_LEFT) return true;
 			if (dragging >= 0)
@@ -166,6 +185,8 @@ bool PlotWindow::handle_event(const SDL_Event &e)
 			return true;
 		case SDL_MOUSEMOTION:
 		{
+			if (dragging < -1) return true;
+
 			auto buttons = e.motion.state;
 			//static int i = 0; ++i; i %=10;
 			//std::cout << i << "B " << buttons << std::endl;
@@ -179,19 +200,29 @@ bool PlotWindow::handle_event(const SDL_Event &e)
 				return true;
 			}
 
-			double dx = -e.motion.xrel, dy = -e.motion.yrel, dz = 0.0;
-			drag_v.clear();
-
 			SDL_Keymod m = SDL_GetModState();
 			bool shift   = (m & (KMOD_LSHIFT|KMOD_RSHIFT));
+			bool ctrl    = (m & (KMOD_LCTRL|KMOD_RCTRL));
+			bool alt     = (m & (KMOD_LALT|KMOD_RALT));
+
+			double dx = e.motion.xrel, dy = e.motion.yrel, dz = 0.0;
+			drag_v.clear();
+
+			if (alt && !ctrl && !shift)
+			{
+				doc.shovel(e.motion.x, e.motion.y, dx, dy);
+				redraw();
+				return true;
+			}
 			
 			if (shift)
 			{
-				dz = absmax(dx, -dy);
+				dz = absmax(-dx, dy);
 				dx = dy = 0.0;
 			}
 
-			translate(dx, dy, dz);
+			doc.camera.translate(-dx, -dy, dz);
+			redraw();
 			return true;
 		}
 		case SDL_MOUSEWHEEL:
@@ -211,7 +242,8 @@ bool PlotWindow::handle_event(const SDL_Event &e)
 					dx = dy = 0.0;
 				}
 
-				translate(10.0*dx, 10.0*dy, dz, mx, my);
+				doc.camera.translate(10.0*dx, 10.0*dy, dz, mx, my);
+				redraw();
 
 				if (dragging >= 0)
 					doc.drag(dragging, drag_rel, mx, my, drag_v);
@@ -222,8 +254,9 @@ bool PlotWindow::handle_event(const SDL_Event &e)
 				(void)SDL_GetMouseState(&mx, &my);
 				double dx = -5.0*e.wheel.x, dy = -5.0*e.wheel.y;
 
-				translate(0, 0, dy, mx, my);
-				translate(0, 0, dx, mx, my);
+				doc.camera.translate(0, 0, dy, mx, my);
+				doc.camera.translate(0, 0, dx, mx, my);
+				redraw();
 			}
 			return true;
 		}
@@ -265,7 +298,6 @@ bool PlotWindow::handle_key(SDL_Keysym keysym, bool release)
 			break;
 		case SDLK_e:
 			doc.arrange_edges();
-			doc.reset_view();
 			redraw();
 			start_animations();
 			break;
@@ -302,11 +334,4 @@ void PlotWindow::draw()
 	fps.frame();
 	doc.draw();
 	need_redraw = false;
-}
-
-void PlotWindow::translate(double dx, double dy, double dz, int mx, int my)
-{
-	//if (fabs(dx) < 1e-8 && fabs(dy) < 1e-8 && fabs(dz) < 1e-8) return;
-	doc.camera.translate(dx, dy, dz, mx, my);
-	redraw();
 }

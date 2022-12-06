@@ -1,6 +1,18 @@
 #include "Puzzle.h"
 #include <random>
 
+static auto engine = std::default_random_engine(std::chrono::system_clock::now().time_since_epoch().count());
+double rand01()
+{
+	static auto r = std::bind(std::uniform_real_distribution<>(0.0, 1.0), ::engine);
+	return r();
+}
+double rand11()
+{
+	static auto r = std::bind(std::uniform_real_distribution<>(-1.0, 1.0), ::engine);
+	return r();
+}
+
 Puzzle::Puzzle()
 : N(0), W(0), H(0)
 {
@@ -101,7 +113,7 @@ void Puzzle::reset(double W0, double H0, int N0)
 	groups.clear();
 	g.resize(N, -1);
 
-	auto rand_bool = std::bind(std::uniform_int_distribution<>(0, 1), std::default_random_engine());
+	auto rand_bool = std::bind(std::uniform_int_distribution<>(0, 1), engine);
 	ev.resize(H*(W-1)); for (auto v : ev) v = rand_bool();
 	eh.resize(W*(H-1)); for (auto v : eh) v = rand_bool();
 
@@ -122,36 +134,38 @@ void Puzzle::reset(double W0, double H0, int N0)
 	}
 }
 
-void Puzzle::shuffle(bool heap)
+void Puzzle::shuffle(bool grid)
 {
 	// shuffle z-order
-	auto e = std::default_random_engine();
 	for (int i = 0; i < N-1; ++i)
 	{
-		int j = std::uniform_int_distribution<>(i, N-1)(e);
+		int j = std::uniform_int_distribution<>(i, N-1)(engine);
 		std::swap(z[i], z[j]);
 	}
 	
 	groups.clear();
 	g.assign(N, -1);
 
-	if (!heap)
+	if (grid)
 	{
-		int n = (int)std::ceil(std::sqrt(N));
-		for (int i = 0; i < N; ++i)
-			pos[i].set((z[i]%n)*1.5f, (z[i]/n)*1.5f);
+		const float spcx = 0.3*sx + 0.5f, spcy = 0.3*sy + 0.5f;
+		for (int j = 0; j < H; ++j)
+		{
+			for (int i = 0; i < W; ++i)
+			{
+				int k = j*W + i;
+				pos[z[k]].set(
+					(i-0.5f*W)*(sx+spcx)+0.5f*spcx,
+					(j-0.5f*H)*(sy+spcy)+0.5f*spcy);
+			}
+		}
 	}
 	else
 	{
-		auto rand_r = std::bind(std::uniform_real_distribution<>(-1.0f, 1.0f), e);
-		double n = std::sqrt(N);
 		for (int i = 0; i < N; ++i)
 		{
-			float x, y, rq;
-			do{ x = rand_r(); y = rand_r(); rq = x*x+y*y; } while(rq > 1.0f);
-			x *= rq; y *= rq;
-			x *= rq; y *= rq;
-			pos[i].set(n*x, n*y);
+			float x = rand01() * (W-1), y = rand01() * (H-1);
+			pos[i].set(x-0.5f*W, y-0.5f*H);
 		}
 	}
 

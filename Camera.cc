@@ -64,10 +64,10 @@ void Camera::set(GLuint u, int aa_pass, int num_passes) const
 
 	m.a11 = 2.0 / (r-l);
 	m.a22 = 2.0 / (t-b);
-	m.a33 = 2.0 / (n-f);
+	m.a33 = 2.0 / (f-n);
 	m.a14 = (l+r) / (l-r);
 	m.a24 = (b+t) / (b-t);
-	m.a34 = (n+f) / (n-f);
+	m.a34 = (n+f) / (f-n);
 
 	/*M4d m(1.0), im(1.0);
 	im.a11 = (r-l)*0.5;
@@ -100,6 +100,8 @@ void Camera::zoom(double f)
 		range.x = zmax;
 		range.y = range.x * hr;
 	}
+
+	R = (w < h ? range.x : range.y);
 }
 
 void Camera::translate(double dx, double dy, double dz, int mx, int my)
@@ -126,16 +128,15 @@ void Camera::translate(double dx, double dy, double dz, int mx, int my)
 		}
 	}
 }
-P2f Camera::convert(int mx, int my, bool absolute) const
+P2f Camera::convert(int mx, int my) const
 {
-	if (absolute)
-	{
-		double x0 = 2.0 * mx / (w-1) - 1.0; // [-1,1]
-		double y0 = 2.0 * my / (h-1) - 1.0;
-		double x2 = x0 * range.x + center.x;
-		double y2 = y0 * range.y + center.y;
-		return P2f(x2, y2);
-	}
-
-	return P2f(mx * 2.0*range.x / w, my * 2.0*range.y / h);
+	return P2f(
+		(2.0 * mx / (w-1) - 1.0) * range.x + center.x,
+		(2.0 * my / (h-1) - 1.0) * range.y + center.y);
+}
+P2f Camera::dconvert(double dx, double dy) const
+{
+	return P2f(
+		2.0 * range.x * dx / (w-1),
+		2.0 * range.y * dy / (h-1));
 }

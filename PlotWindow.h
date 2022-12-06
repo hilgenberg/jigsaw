@@ -41,7 +41,5 @@ protected:
 
 	std::map<SDL_Keycode, double> ikeys; // pressed key -> inertia
 	std::set<SDL_Keycode> keys; // pressed keys
-
-	void translate(double dx, double dy, double dz, int mx = -1, int my = -1);
 };
 

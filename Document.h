@@ -5,6 +5,7 @@
 #include "OpenGL/GL_Color.h"
 #include <string>
 #include "Persistence/Serializer.h"
+class Histogram;
 
 struct Document : public Serializable
 {
@@ -25,6 +26,8 @@ struct Document : public Serializable
 	void reset_view();
 	void arrange();
 	void arrange_edges();
+	void hide(int piece, bool and_similar = false);
+	void shovel(int mx, int my, double dx, double dy);
 
 	Puzzle      puzzle;
 	Camera      camera;
@@ -35,5 +38,7 @@ struct Document : public Serializable
 private:
 	void init();
 	void free_all();
+	std::unique_ptr<Histogram> histo;
+	void move(int piece, double R);
 };
 

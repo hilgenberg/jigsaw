@@ -7,6 +7,9 @@
 #include "Vector.h"
 #include "Persistence/Serializer.h"
 
+extern double rand01(); //  0..1
+extern double rand11(); // -1..1
+
 struct Puzzle : public Serializable
 {
 	Puzzle(); // tries for approximately N somewhat square pieces
@@ -41,6 +44,7 @@ struct Puzzle : public Serializable
 	std::map<Piece, Anim> animations;
 	void animate(double dt);
 
+	P2f  get(Piece i) const { assert(i >= 0 && i < N); return P2f(pos[i].x*sx, pos[i].y*sy); }
 	void move(Piece i, const P2f &p, bool animate);
 	void move(Piece i, float x, float y, bool animate) { move(i, P2f(x/sx,y/sy), animate); }
 	bool connect(Piece i, float delta_max); // returns true for new connections
@@ -106,7 +110,7 @@ struct Puzzle : public Serializable
 
 	void sanity_checks() const
 	{
-		#ifndef NDEBUG
+		#if 0 //ndef NDEBUG
 		assert(W >= 0 && H >= 0);
 		assert(N == W*H);
 		assert(pos.size() == N);

@@ -4,6 +4,9 @@
 
 #define DEGREES (M_PI/180.0)
 
+// Camera coordinates: x to right, y down (y = 0 is above y = 1)
+// Puzzle coordinates: dito, only scaled with Puzzle::sx, sy
+
 class Camera : public Serializable
 {
 public:
@@ -20,12 +23,13 @@ public:
 	double aspect() const{ return hr; }
 	double pixel_size() const{ return 2.0*range.x / w; } // => w*pixelsize = 2*xrange
 	bool empty() const { return w <= 1 || h <= 1; }
+	P2f convert(int mx, int my) const;
+	P2f dconvert(double dx, double dy) const;
 
 	void reset();
 	void zoom(double f);
 	void move(double dx, double dy);
-	void translate(double dx, double dy, double dz, int mx, int my);
-	P2f convert(int mx, int my, bool absolute) const;
+	void translate(double dx, double dy, double dz, int mx = -1, int my = -1);
 	void view_box(float x0, float x1, float y0, float y1, float factor = 1.0f)
 	{
 		center.set((x0+x1)*0.5f, (y0+y1)*0.5f);
@@ -34,10 +38,10 @@ public:
 		else       range.set(R / hr, R);
 	}
 
-	P2d    center, range;
+	P2d center, range;
+	double R; // min range (range is computed from this)
 
 private:
-	double R; // min range (range is computed from this)
 	int    w, h;    // current display port size in pixels
 	double hr;      // aspect ratio: h / w
 };

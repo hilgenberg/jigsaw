@@ -1,8 +1,8 @@
 #version 430 core
 
 layout(points) in;
-in  uint borders_geo[];
-in  vec2 tex_geo[];
+in uint borders_geo[];
+in vec2 tex_geo[];
 
 layout(triangle_strip, max_vertices = 4) out;
 out vec2 tex_coord;
@@ -28,6 +28,10 @@ void main()
 	const vec2 q [] = vec2 [] (vec2(0.0f, 0.0f), vec2(1.0f, 0.0f), vec2(0.0f, 1.0f), vec2(1.0f, 1.0f));
 	vec2 t = tex_geo[0];
 
+	// R is radius of big circle
+	// r is radius of small circle
+	// d0 is the distance of the small circle's center to the original edge
+	// h is computed from R (height of the area that the big circle cuts off)
 	const float R = 1.5f, r = 0.15f, d0 = 0.0f, h = 0.08578643762690485f;
 	const float d1 = r+d0, d2 = h;
 	float x0 = 0.0f, x1 = 1.0f, y0 = 0.0f, y1 = 1.0f;
