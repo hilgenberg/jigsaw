@@ -80,10 +80,10 @@ void Document::init()
 		assert(sizeof(Puzzle::Border) == 1);
 		glBindVertexArray(VAO[i]);
 		glBindBuffer(GL_ARRAY_BUFFER, VBO[i]);
-		glBufferData(GL_ARRAY_BUFFER, N*(5*sizeof(float) + 1), NULL, GL_DYNAMIC_DRAW);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)0); // pos
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(3*sizeof(float))); // tex
-		glVertexAttribIPointer(2, 1, GL_UNSIGNED_BYTE,  0, (void*)(5*sizeof(float)*N)); // border
+		glBufferData(GL_ARRAY_BUFFER, N*(4*sizeof(float) + 1), NULL, GL_DYNAMIC_DRAW);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)0); // pos
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)(2*sizeof(float))); // tex
+		glVertexAttribIPointer(2, 1, GL_UNSIGNED_BYTE,  0, (void*)(4*sizeof(float)*N)); // border
 		glEnableVertexAttribArray(0);
 		glEnableVertexAttribArray(1);
 		glEnableVertexAttribArray(2);
@@ -121,6 +121,11 @@ void Document::save(Serializer &s) const
 	s.marker_("EOF.");
 }
 
+template<typename T> struct Reversed             { T& it; };
+template<typename T> auto   begin(Reversed<T> w) { return std::rbegin(w.it); }
+template<typename T> auto     end(Reversed<T> w) { return std::rend(w.it); }
+template<typename T> Reversed<T> reverse(T&& it) { return {it}; }
+
 void Document::draw()
 {
 	GL_CHECK;
@@ -151,15 +156,14 @@ void Document::draw()
 	const int W = puzzle.W, H = puzzle.H;
 	float sx = puzzle.sx, sy = puzzle.sy;
 	float *data = (float*)glMapNamedBuffer(VBO[current_buf], GL_WRITE_ONLY);
-	unsigned char *d = (unsigned char*)(data+5*N);
-	for (int i = 0; i < N; ++i)
+	unsigned char *d = (unsigned char*)(data+4*N);
+	for (int i : reverse(puzzle.z))
 	{
 		const P2f &p = puzzle.pos[i];
-		data[5*i] = p.x*sx; data[5*i+1] = p.y*sy;
-		data[5*puzzle.z[i]+2] = 1.0 - 2.0*(i+1)/(N+1); // with 24-bit depth buffer should work up to 16.7 million pieces
+		*data++ = p.x*sx; *data++ = p.y*sy;
 	 	float x = i%W, y = i/W;
-		data[5*i+3] = x/W; data[5*i+4] = y/H;
-		d[i] = (int)puzzle.borders[i];
+		*data++ = x/W; *data++ = y/H;
+		*d++ = (int)puzzle.borders[i];
 	}
 	GL_CHECK;
 	glUnmapNamedBuffer(VBO[current_buf]);
