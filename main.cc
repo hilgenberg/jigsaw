@@ -20,49 +20,6 @@ static int usage(const char *arg0)
 	return 1;
 }
 
-static bool load(Document &doc, const char *file, int n = -1)
-{
-	if (file)
-	{
-		std::filesystem::path p(file);
-		p = absolute(p);
-
-		try
-		{
-			doc.load(p.c_str(), n);
-		}
-		catch (...)
-		{
-			return false;
-		}
-		return true;
-	}
-	std::filesystem::path p = Preferences::directory();
-	if (!is_directory(p)) return false;
-	p /= "state";
-	if (!is_regular_file(p)) return false;
-
-	FILE *F = fopen(p.c_str(), "r");
-	if (!F)
-	{
-		//fprintf(stderr, "cannot read from config file %s!\n", cf.c_str());
-		return false;
-	}
-	try
-	{
-		FileReader fr(F);
-		Deserializer s(fr);
-		doc.load(s);
-		assert(s.done());
-	}
-	catch (...)
-	{
-		fclose(F);
-		return false;
-	}
-	fclose(F);
-	return true;
-}
 static bool save(Document &doc)
 {
 	std::filesystem::path p = Preferences::directory();
@@ -173,13 +130,43 @@ int main(int argc, char *argv[])
 
 	try
 	{
-		if (!load(doc, file_arg, n))
-		#ifdef DEBUG
-		if (!load(doc, "test.jpg", n))
-		#endif
+		if (file_arg)
 		{
-			throw std::runtime_error("File not found");
+			std::filesystem::path p(file_arg);
+			p = absolute(p);
+			if (!doc.load(p.c_str(), n))
+				throw std::runtime_error("Can't read image");
+			Preferences::image(p.c_str());
 		}
+		else if (n > 0)
+		{
+			std::string p = Preferences::image();
+			if (p.empty()) throw std::runtime_error("No default image set yet!");
+			if (!doc.load(p, n))
+				throw std::runtime_error("Can't read image");
+		}
+		else
+		{
+			std::filesystem::path p = Preferences::directory(); p /= "state";
+			if (!is_regular_file(p)) throw std::runtime_error("No savegame found.");
+			FILE *F = fopen(p.c_str(), "r");
+			if (!F) throw std::runtime_error("No savegame found.");
+			try
+			{
+				FileReader fr(F);
+				Deserializer s(fr);
+				doc.load(s);
+				assert(s.done());
+			}
+			catch (...)
+			{
+				fclose(F);
+				throw std::runtime_error("Error reading savegame!");
+			}
+			fclose(F);
+		}
+
+		if (n > 0) Preferences::pieces(n);
 
 		GL_CHECK;
 		GL_Context context(gl_context);
@@ -244,8 +231,11 @@ int main(int argc, char *argv[])
 	Mix_Quit();
 	SDL_Quit();
 	
-	save(doc);
-	Preferences::flush();
+	if (retcode == 0)
+	{
+		save(doc);
+		Preferences::flush();
+	}
 
 	return retcode;
 }

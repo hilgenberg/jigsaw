@@ -97,8 +97,8 @@ void PlotWindow::animate()
 
 	if (dragging >= 0)
 	{
-		dx -= drag_v.x*f;
-		dy -= drag_v.y*f;
+		dx -= drag_v.x*f*4.0;
+		dy -= drag_v.y*f*4.0;
 	}
 	doc.camera.translate(dx, dy, dz);
 	redraw();

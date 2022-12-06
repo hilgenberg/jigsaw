@@ -10,6 +10,7 @@
 #include <iostream>
 #include <sstream>
 #include "Histogram.h"
+#include "Utility/Preferences.h"
 
 //------------------------------------------------------------------
 // construction and drawing
@@ -25,15 +26,19 @@ Document::Document()
 : bg(0.25f)
 {
 }
-void Document::load(const std::string &p, int N)
+bool Document::load(const std::string &p, int N)
 {
-	if (N <= 0) N = 1000;
+	if (N <= 0) N = Preferences::pieces();
+	GL_Image im2; if (!im2.load(p)) return false;
 	free_all();
-	im.load(im_path = p); histo = nullptr;
+	im_path = p;
+	im.swap(im2);
+	histo = nullptr;
 	puzzle.reset(im.w(), im.h(), N);
 	puzzle.shuffle(false);
 	reset_view();
 	init();
+	return true;
 }
 void Document::init()
 {
@@ -106,7 +111,7 @@ void Document::free_all()
 void Document::load(Deserializer &s)
 {
 	free_all();
-	s.string_(im_path); std::cout << im_path << std::endl;
+	s.string_(im_path);
 	s.member_(puzzle);
 	s.member_(camera);
 	s.marker_("EOF.");
@@ -129,7 +134,6 @@ template<typename T> Reversed<T> reverse(T&& it) { return {it}; }
 void Document::draw()
 {
 	GL_CHECK;
-	const int N = puzzle.N;
 	if (camera.empty()) return;
 
 	// clear background
@@ -144,17 +148,17 @@ void Document::draw()
 	glUseProgram(bg_program);
 	glBindVertexArray(VAO[2]); // empty but needed
 	camera.set(0);
-	glUniform2f(1, 0.5f*puzzle.W, 0.5f*puzzle.H);
+	glUniform2f(1, puzzle.W*puzzle.sx, puzzle.H*puzzle.sy);
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-	GL_CHECK;
 	glBindVertexArray(0);
+	GL_CHECK;
 
 	// send current data
-	if (N <= 0) return;
 	GL_CHECK;
-	const int W = puzzle.W, H = puzzle.H;
-	float sx = puzzle.sx, sy = puzzle.sy;
+	const int N = puzzle.N, W = puzzle.W, H = puzzle.H;
+	if (N <= 0) return;
+	const float sx = puzzle.sx, sy = puzzle.sy;
 	float *data = (float*)glMapNamedBuffer(VBO[current_buf], GL_WRITE_ONLY);
 	unsigned char *d = (unsigned char*)(data+4*N);
 	for (int i : reverse(puzzle.z))
@@ -181,18 +185,17 @@ void Document::draw()
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
-	GL_CHECK;
 	glDrawArrays(GL_POINTS, 0, N);
 	GL_CHECK;
 
 	++current_buf; current_buf %= 2;
-	GL_CHECK;
 }
 
 Document::~Document()
 {
 	free_all();
 	if (program) glDeleteProgram(program); program = 0;
+	if (bg_program) glDeleteProgram(bg_program); bg_program = 0;
 }
 
 //------------------------------------------------------------------
@@ -203,7 +206,11 @@ void Document::reset_view()
 {
 	float x0, x1, y0, y1;
 	puzzle.bbox(x0, x1, y0, y1);
-	camera.view_box(x0, x1, y0, y1, 1.5f);
+	x0 = std::min(x0, -0.5f*puzzle.W*puzzle.sx);
+	x1 = std::max(x1,  0.5f*puzzle.W*puzzle.sx);
+	y0 = std::min(y0, -0.5f*puzzle.H*puzzle.sy);
+	y1 = std::max(y1,  0.5f*puzzle.H*puzzle.sy);
+	camera.view_box(x0, x1, y0, y1, 1.25f);
 }
 
 void Document::arrange()
@@ -221,12 +228,13 @@ void Document::arrange()
 	}
 	if (X1 > X0+0.123 || Y1 > Y0+0.123)
 	{
-		X0 -= 2.0; X1 += 2.0;
-		Y0 -= 2.0; Y1 += 2.0;
+		X0 -= 0.5; X1 += 0.5;
+		Y0 -= 0.5; Y1 += 0.5;
 	}
 
 	const float w = puzzle.sx, h = puzzle.sy;
 #if 0
+	// spiral
 	const double rp = 0.5*1.3*hypot(w, h);
 	P2f c(0.5f*(X0+X1)-0.5f*w, 0.5f*(Y0+Y1)-0.5f*h);
 	double r = 0.5*hypot(X1-X0, Y1-Y0), a = atan2(Y0-Y1, X1-X0);
@@ -241,7 +249,7 @@ void Document::arrange()
 		r += 2.0*rp/r * rp/M_PI;
 	}
 #else
-	const float spcx = 0.3*w + 0.5f, spcy = 0.3*h + 0.5f;
+	const float spcx = 0.3*w + 0.25f, spcy = 0.3*h + 0.25f;
 	int nx = std::ceil((X1-X0-spcx) / (w+spcx));
 	int ny = std::ceil((Y1-Y0-spcy) / (h+spcy));
 	X0 = 0.5f*(X0+X1) - 0.5f*(nx > 0 ? nx*(w+spcx)-spcx : 0.0f);
@@ -298,7 +306,7 @@ static void pack_edge(Puzzle &puzzle, std::vector<int> &P, P2f c, P2f r, float w
 // w, h are the pieces' dimensions along and across the edge
 {
 	std::sort(P.begin(), P.end(), [&puzzle](int a, int b) { return puzzle.z[a] > puzzle.z[b]; });
-	const float spcx = 0.3*w + 0.5f, spcy = 0.3*h + 0.5f;
+	const float spcx = 0.3*w + 0.25f, spcy = 0.3*h + 0.25f;
 	float W = r.abs();
 	int nx = std::floor((W-spcx) / (w+spcx));
 	r /= W;

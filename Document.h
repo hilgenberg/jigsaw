@@ -12,7 +12,7 @@ struct Document : public Serializable
 	Document();
 	~Document();
 
-	void load(const std::string &im_path, int n = -1);
+	bool load(const std::string &im_path, int n = -1);
 
 	void save(Serializer &s) const;
 	void load(Deserializer &s);

@@ -7,13 +7,12 @@ static bool load();
 static bool save();
 static bool have_changes = false; // were any defaults changed?
 
-static bool normals_   = false;
-static bool dynamic_   = true;
-static bool depthSort_ = true;
 static bool showFPS_   = false;
 static bool vsync_     = true;
 static int  fps_       = 60;
-static int  threads_   = -1;
+static std::string image_;
+static int pieces_     = 256;
+
 const int n_cores = (int)std::thread::hardware_concurrency();
 
 namespace Preferences
@@ -41,25 +40,17 @@ namespace Preferences
 
 	bool reset()
 	{
-		normals_   = false;
-		dynamic_   = true;
-		depthSort_ = true;
 		showFPS_   = false;
 		vsync_     = true;
 		fps_       = 60;
-		threads_   = -1;
+		pieces_    = 256;
+		image_.clear();
 		load(); have_changes = false;
 		return true;
 	}
 	bool flush() { return !have_changes || save(); }
 
 	#define SET(x) do{ if ((x)==value) return; (x) = value; have_changes = true; }while(0)
-
-	bool dynamic() { return dynamic_; }
-	void dynamic(bool value) { SET(dynamic_); }
-
-	bool drawNormals() { return normals_; }
-	void drawNormals(bool value) { SET(normals_); }
 
 	bool showFPS() { return showFPS_; }
 	void showFPS(bool value) { SET(showFPS_); }
@@ -70,15 +61,11 @@ namespace Preferences
 	int  fps() { return fps_; }
 	void fps(int value) { SET(fps_); }
 
-	bool depthSort() { return depthSort_; }
-	void depthSort(bool value) { SET(depthSort_); }
+	int  pieces() { return pieces_; }
+	void pieces(int value) { SET(pieces_); }
 
-	int  threads(bool effective)
-	{
-		if (!effective) return threads_;
-		return threads_ <= 0 ? n_cores : threads_;
-	}
-	void threads(int value) { SET(threads_); }
+	std::string image() { return image_; }
+	void image(const std::string &value) { SET(image_); }
 };
 
 
@@ -86,7 +73,7 @@ static path config_file()
 {
 	static path cfg = Preferences::directory();
 	if (cfg.empty()) return cfg;
-	return cfg / "cplot.ini";
+	return cfg / "puzzle.ini";
 }
 
 static bool parse(const char *v, bool &o)
@@ -169,13 +156,11 @@ static bool load()
 		}
 
 		const char *v = value.c_str();
-		if      (key == "normals"  ) parse(v, normals_);
-		else if (key == "dynamic"  ) parse(v, dynamic_);
-		else if (key == "depthSort") parse(v, depthSort_);
-		else if (key == "threads"  ) parse(v, threads_);
+		if      (key == "pieces"   ) parse(v, pieces_);
 		else if (key == "showFPS"  ) parse(v, showFPS_);
 		else if (key == "vsync"    ) parse(v, vsync_);
 		else if (key == "fps"      ) parse(v, fps_);
+		else if (key == "image"    ) image_ = value;
 		else
 		{
 			fprintf(stderr, "Ignoring invalid key in preference file: %s\n", key.c_str());
@@ -197,13 +182,11 @@ static bool save()
 	}
 
 	fprintf(file, "# auto-generated - file will be overwritten by preference dialog!\n");
-	fprintf(file, "normals=%s\n", normals_ ? "on" : "off");
-	fprintf(file, "dynamic=%s\n", dynamic_ ? "on" : "off");
-	fprintf(file, "depthSort=%s\n", depthSort_ ? "on" : "off");
+	fprintf(file, "pieces=%d\n", pieces_);
 	fprintf(file, "showFPS=%s\n", showFPS_ ? "on" : "off");
 	fprintf(file, "fps=%d\n", fps_);
 	fprintf(file, "vsync=%s\n", vsync_ ? "on" : "off");
-	fprintf(file, "threads=%d\n", threads_);
+	fprintf(file, "image=%s\n", image_.c_str());
 	fclose (file);
 	have_changes = false;
 	return true;
