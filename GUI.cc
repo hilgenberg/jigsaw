@@ -2,14 +2,14 @@
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_sdl.h"
 #include "imgui/backends/imgui_impl_opengl3.h"
-#include "PlotWindow.h"
-#include "../Utility/Preferences.h"
+#include "Window.h"
+#include "Utility/Preferences.h"
 
 extern volatile bool quit;
 extern const std::vector<unsigned char> &font_data();
 static std::string ini_location;
 
-GUI::GUI(SDL_Window* window, SDL_GLContext context, PlotWindow &w)
+GUI::GUI(SDL_Window* window, SDL_GLContext context, Window &w)
 : w(w)
 , visible(false)
 , need_redraw(1)
@@ -74,9 +74,29 @@ void GUI::update()
 
 	ImGui::GetStyle().FrameBorderSize = dark ? 0.0f : 1.0f;
 
-	error_panel();
-	confirmation_panel();
-	prefs_panel();
+	ImGui::Begin("##Preferences");
+	ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
+	bool b0, b; int i0, i;
+	
+	static const char *edges[] = {"Square Tiles", "Regular Jigsaw", "Triangular Edge", "Rectangular Edge", "Semicircle"};
+	i = i0 = Preferences::edge();
+	ImGui::Combo("Edges", &i, edges, 5);
+	if (i != i0) Preferences::edge((EdgeType)i);
+
+	ImGui::Text("Animation FPS limit (-1 for none)");
+	i0 = Preferences::fps(); i = i0;
+	ImGui::InputInt("##fps", &i, 1, 0);
+	if (i != i0) Preferences::fps(i);
+
+	b0 = Preferences::vsync(); b = b0;
+	ImGui::Checkbox("VSync", &b);
+	if (b != b0) {
+		SDL_GL_SetSwapInterval(b);
+		Preferences::vsync(b); redraw();
+	}
+	int fps = w.current_fps(); if (fps > 0) ImGui::Text("FPS = %d", fps);
+	ImGui::PopItemWidth();
+	ImGui::End();
 
 	#ifdef DEBUG
 	if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
@@ -90,35 +110,6 @@ void GUI::draw()
 	glUseProgram(0);
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	if (need_redraw > 0) --need_redraw;
-}
-
-void GUI::error(const std::string &msg)
-{
-	error_msg = msg;
-	visible = true;
-	redraw();
-	// cannot call OpenPopup here! would cause the IDs to mismatch.
-}
-
-void GUI::confirm(bool c, const std::string &msg, std::function<void(void)> action)
-{
-	assert(action);
-	if (!c)
-	{
-		try
-		{
-			action();
-		}
-		catch (std::exception &e)
-		{
-			error(e.what());
-		}
-		return;
-	}
-	confirm_msg = msg;
-	confirm_action = action;
-	visible = true;
-	redraw();
 }
 
 bool GUI::handle_event(const SDL_Event &event)
@@ -186,10 +177,7 @@ bool GUI::handle_event(const SDL_Event &event)
 			case SDLK_ESCAPE:
 				if (mods || ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId + ImGuiPopupFlags_AnyPopupLevel))
 					break;
-				if (show_prefs_panel)
-					show_prefs_panel = false;
-				else
-					visible = !visible;
+				visible = !visible;
 				redraw();
 				w.redraw();
 				return true;

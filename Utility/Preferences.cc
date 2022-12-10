@@ -7,13 +7,11 @@ static bool load();
 static bool save();
 static bool have_changes = false; // were any defaults changed?
 
-static bool showFPS_   = false;
 static bool vsync_     = true;
 static int  fps_       = 60;
 static std::string image_;
 static int pieces_     = 256;
-
-const int n_cores = (int)std::thread::hardware_concurrency();
+static EdgeType edge_  = Regular;
 
 namespace Preferences
 {
@@ -40,10 +38,10 @@ namespace Preferences
 
 	bool reset()
 	{
-		showFPS_   = false;
 		vsync_     = true;
 		fps_       = 60;
 		pieces_    = 256;
+		edge_      = Regular;
 		image_.clear();
 		load(); have_changes = false;
 		return true;
@@ -51,9 +49,6 @@ namespace Preferences
 	bool flush() { return !have_changes || save(); }
 
 	#define SET(x) do{ if ((x)==value) return; (x) = value; have_changes = true; }while(0)
-
-	bool showFPS() { return showFPS_; }
-	void showFPS(bool value) { SET(showFPS_); }
 
 	bool vsync() { return vsync_; }
 	void vsync(bool value) { SET(vsync_); }
@@ -63,6 +58,9 @@ namespace Preferences
 
 	int  pieces() { return pieces_; }
 	void pieces(int value) { SET(pieces_); }
+
+	EdgeType edge() { return edge_; }
+	void edge(EdgeType value) { SET(edge_); }
 
 	std::string image() { return image_; }
 	void image(const std::string &value) { SET(image_); }
@@ -157,10 +155,10 @@ static bool load()
 
 		const char *v = value.c_str();
 		if      (key == "pieces"   ) parse(v, pieces_);
-		else if (key == "showFPS"  ) parse(v, showFPS_);
 		else if (key == "vsync"    ) parse(v, vsync_);
 		else if (key == "fps"      ) parse(v, fps_);
 		else if (key == "image"    ) image_ = value;
+		else if (key == "edge"     ) parse(v, (int&)edge_);
 		else
 		{
 			fprintf(stderr, "Ignoring invalid key in preference file: %s\n", key.c_str());
@@ -183,10 +181,10 @@ static bool save()
 
 	fprintf(file, "# auto-generated - file will be overwritten by preference dialog!\n");
 	fprintf(file, "pieces=%d\n", pieces_);
-	fprintf(file, "showFPS=%s\n", showFPS_ ? "on" : "off");
 	fprintf(file, "fps=%d\n", fps_);
 	fprintf(file, "vsync=%s\n", vsync_ ? "on" : "off");
 	fprintf(file, "image=%s\n", image_.c_str());
+	fprintf(file, "edge=%d\n", (int)edge_);
 	fclose (file);
 	have_changes = false;
 	return true;

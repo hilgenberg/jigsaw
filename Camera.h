@@ -1,5 +1,5 @@
 #pragma once
-#include "Matrix.h"
+#include "Utility/Matrix.h"
 #include "Persistence/Serializer.h"
 
 #define DEGREES (M_PI/180.0)

@@ -4,7 +4,7 @@
 #include <map>
 #include <cassert>
 #include <functional>
-#include "Vector.h"
+#include "Utility/Vector.h"
 #include "Persistence/Serializer.h"
 
 extern double rand01(); //  0..1
@@ -85,6 +85,8 @@ struct Puzzle : public Serializable
 		int x = i % W, y = i / W;
 		return x == 0 || x == W-1 || y == 0 || y == H-1;
 	}
+
+	bool is_big_border_group(Piece i) const;
 
 	void bbox(float &x0, float &x1, float &y0, float &y1, bool groups_only = false) const
 	{

@@ -1,8 +1,8 @@
 #pragma once
 #include "Puzzle.h"
 #include "Camera.h"
-#include "OpenGL/GL_Image.h"
-#include "OpenGL/GL_Color.h"
+#include "Utility/GL_Image.h"
+#include "Utility/GL_Color.h"
 #include <string>
 #include "Persistence/Serializer.h"
 class Histogram;
@@ -20,7 +20,7 @@ struct Document : public Serializable
 	void draw();
 
 	int hit_test(int mx, int my, bool pick_up, P2f &rel);
-	void drag(int piece, const P2f &rel, int mx, int my, P2d &v);
+	void drag(int piece, const P2f &rel, int mx, int my, P2d &v, double mdx = 0, double mdy = 0);
 	bool drop(int piece);
 	
 	void reset_view();
@@ -39,6 +39,5 @@ private:
 	void init();
 	void free_all();
 	std::unique_ptr<Histogram> histo;
-	void move(int piece, double R);
 };
 

@@ -1,15 +1,14 @@
 #pragma once
 #include "Document.h"
-#include "OpenGL/GL_RM.h"
 #include "Utility/FPSCounter.h"
 #include <map>
 #include <SDL_events.h>
 
-class PlotWindow 
+class Window 
 {
 public:
-	PlotWindow(SDL_Window* window, GL_Context &context, Document &doc);
-	virtual ~PlotWindow();
+	Window(SDL_Window* window, Document &doc);
+	virtual ~Window();
 
 	bool needs_redraw() const{ return need_redraw; }
 	bool animating() const{ return tnf > 0.0; }
@@ -24,6 +23,7 @@ public:
 	bool handle_key(SDL_Keysym key, bool release);
 
 	void start_animations(); // call after Parameter::anim_start()
+	int current_fps() const;
 
 protected:
 	Document   &doc;
@@ -32,7 +32,6 @@ protected:
 
 	double      tnf;        // scheduled time for next frame
 	double      last_frame; // time of last animate() call
-	GL_RM       rm;
 	FPSCounter  fps;
 	bool        need_redraw;
 	int         dragging = -1;

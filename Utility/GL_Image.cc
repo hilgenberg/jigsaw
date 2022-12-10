@@ -86,7 +86,6 @@ void GL_Image::load(Deserializer &s)
 	check_data();
 
 	++_state;
-	modify();
 }
 
 const std::vector<unsigned char> &GL_Image::data() const

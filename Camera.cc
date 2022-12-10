@@ -1,5 +1,5 @@
 #include "Camera.h"
-#include "OpenGL/GL_Util.h"
+#include "Utility/GL_Util.h"
 #include <GL/gl.h>
 #include <GL/glu.h>
 

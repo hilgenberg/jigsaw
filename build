@@ -66,9 +66,6 @@ def getf(cmd):
 	if r.returncode != 0: sys.exit(cmd + " failed!")
 	return r.stdout.strip()
 
-# add pangocairo library (remove unused libs to keep namcap happy)
-cflags += " " + getf('pkg-config --cflags pangocairo')
-lflags += " " + getf('pkg-config --libs   pangocairo').replace("-lharfbuzz","").replace("-lglib-2.0","")
 # add SDL2
 cflags += " " + getf('sdl2-config --cflags')
 lflags += " " + getf('sdl2-config --libs')

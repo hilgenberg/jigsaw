@@ -1,15 +1,13 @@
 #pragma once
 #include "../Persistence/Serializer.h"
 #include "GL_Color.h"
-#include "GL_RM.h"
 #include <vector>
 
-struct GL_Image : public Serializable, public GL_Resource
+struct GL_Image : public Serializable
 {
 	GL_Image() : _w(0), _h(0), _opacity(1), _state(0){ }
 	GL_Image(const GL_Image &i)
-	: GL_Resource() // not copied
-	, _state(0)
+	: _state(0)
 	, _w(i._w), _h(i._h), _data(i._data), _opacity(i._opacity)
 	{
 		check_data();
@@ -27,7 +25,6 @@ struct GL_Image : public Serializable, public GL_Resource
 		_opacity = x._opacity;
 		check_data();
 		++_state;
-		modify();
 		return *this;
 	}
 
@@ -38,7 +35,6 @@ struct GL_Image : public Serializable, public GL_Resource
 		std::swap(_data, x._data);
 		std::swap(_opacity, x._opacity);
 		++_state; ++x._state;
-		modify(); x.modify();
 		return *this;
 	}
 
@@ -58,7 +54,6 @@ struct GL_Image : public Serializable, public GL_Resource
 		_data.resize(_w * _h * 4);
 		_opacity = -1;
 		++_state;
-		modify(); // even if w==w_ and h==h_ !
 		return _data.data();
 	}
 	

@@ -63,8 +63,6 @@ struct GL_Color : public Serializable
 	GL_Color operator* (float alpha) const{ assert(alpha >= 0.0f && alpha <= 1.0f); return GL_Color(r, g, b, a * alpha); }
 
 	void hsl(double h, double s, double l); // leaves a as is
-
-	static const std::map<std::string, GL_Color> named_colors(); // red, green, ...
 };
 
 std::ostream &operator<<(std::ostream &os, const GL_Color &c);

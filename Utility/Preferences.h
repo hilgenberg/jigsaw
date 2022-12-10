@@ -7,6 +7,15 @@
  * Setters should be persistent.
  */
 
+enum EdgeType
+{
+	None = 0, // plain rectangles
+	Regular,  // regular jigsaw pieces
+	Linear,   // _/\_ triangular cutout
+	Groove,   // --_--
+	Circle,   // semicircle
+};
+
 namespace Preferences
 {
 	bool flush(); // store changes into registry/ini file
@@ -14,8 +23,8 @@ namespace Preferences
 
 	std::filesystem::path directory();
 
-	bool showFPS();
-	void showFPS(bool value);
+	EdgeType edge();
+	void edge(EdgeType value);
 
 	int  fps();
 	void fps(int value);

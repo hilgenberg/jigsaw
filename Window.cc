@@ -1,17 +1,15 @@
-#include "PlotWindow.h"
+#include "Window.h"
 #include "Document.h"
+#include "Camera.h"
 #include "Utility/StringFormatting.h"
 #include "Utility/Preferences.h"
-#include "Camera.h"
-#include "OpenGL/GL_Color.h"
-#include "OpenGL/GL_Font.h"
+#include "Utility/GL_Color.h"
+#include "Utility/GL_Util.h"
 #include "Utility/Timer.h"
 #include "Utility/Preferences.h"
-#include "OpenGL/GL_Context.h"
 #include <GL/gl.h>
 #include <cassert>
 #include <algorithm>
-#include "OpenGL/GL_AAMode.h"
 #include <SDL_mixer.h>
 
 extern const std::vector<unsigned char> &click_data();
@@ -21,10 +19,9 @@ extern volatile bool quit;
 
 static inline double absmax(double a, double b){ return fabs(a) > fabs(b) ? a : b; }
 
-PlotWindow::PlotWindow(SDL_Window* window, GL_Context &context, Document &doc)
+Window::Window(SDL_Window* window, Document &doc)
 : tnf(-1.0)
 , last_frame(-1.0)
-, rm(context)
 , w(0), h(0)
 , need_redraw(true)
 , window(window)
@@ -38,14 +35,14 @@ PlotWindow::PlotWindow(SDL_Window* window, GL_Context &context, Document &doc)
 		if (io) click_wav = Mix_LoadWAV_RW(io, true);
 	}
 }
-PlotWindow::~PlotWindow()
+Window::~Window()
 {
 	if (click_wav) { Mix_FreeChunk(click_wav); click_wav = NULL; }
 }
 
-void PlotWindow::start_animations() { if (tnf <= 0.0) last_frame = tnf = now(); }
+void Window::start_animations() { if (tnf <= 0.0) last_frame = tnf = now(); }
 
-void PlotWindow::animate()
+void Window::animate()
 {
 	if (tnf <= 0.0) return;
 
@@ -62,7 +59,7 @@ void PlotWindow::animate()
 
 	double dt = std::min(std::max(1e-42, t - last_frame), 0.25);
 	last_frame = t;
-	
+
 	double dx = 0.0, dy = 0.0, dz = 0.0;
 
 	for (auto &i : ikeys)
@@ -97,8 +94,8 @@ void PlotWindow::animate()
 
 	if (dragging >= 0)
 	{
-		dx -= drag_v.x*f*4.0;
-		dy -= drag_v.y*f*4.0;
+		dx -= drag_v.x*f*3.0;
+		dy -= drag_v.y*f*3.0;
 	}
 	doc.camera.translate(dx, dy, dz);
 	redraw();
@@ -118,7 +115,7 @@ void PlotWindow::animate()
 	}
 }
 
-bool PlotWindow::handle_event(const SDL_Event &e)
+bool Window::handle_event(const SDL_Event &e)
 {
 	switch (e.type)
 	{
@@ -192,11 +189,12 @@ bool PlotWindow::handle_event(const SDL_Event &e)
 			//std::cout << i << "B " << buttons << std::endl;
 			if (!(buttons & (SDL_BUTTON_LMASK|SDL_BUTTON_RMASK|SDL_BUTTON_MMASK))) return true;
 			
+			double dx = e.motion.xrel, dy = e.motion.yrel, dz = 0.0;
 			if (dragging >= 0)
 			{
-				doc.drag(dragging, drag_rel, e.motion.x, e.motion.y, drag_v);
-				redraw();
+				doc.drag(dragging, drag_rel, e.motion.x, e.motion.y, drag_v, dx, dy);
 				if (drag_v.absq() > 1e-12) start_animations();
+				redraw();
 				return true;
 			}
 
@@ -205,7 +203,6 @@ bool PlotWindow::handle_event(const SDL_Event &e)
 			bool ctrl    = (m & (KMOD_LCTRL|KMOD_RCTRL));
 			bool alt     = (m & (KMOD_LALT|KMOD_RALT));
 
-			double dx = e.motion.xrel, dy = e.motion.yrel, dz = 0.0;
 			drag_v.clear();
 
 			if (alt && !ctrl && !shift)
@@ -264,7 +261,7 @@ bool PlotWindow::handle_event(const SDL_Event &e)
 	return false;
 }
 
-bool PlotWindow::handle_key(SDL_Keysym keysym, bool release)
+bool Window::handle_key(SDL_Keysym keysym, bool release)
 {
 	auto key = keysym.sym;
 	auto m   = keysym.mod;
@@ -319,7 +316,7 @@ bool PlotWindow::handle_key(SDL_Keysym keysym, bool release)
 	return false;
 }
 
-void PlotWindow::reshape(int w_, int h_)
+void Window::reshape(int w_, int h_)
 {
 	if (w == w_ && h == h_) return;
 	w = w_; h = h_;
@@ -329,9 +326,13 @@ void PlotWindow::reshape(int w_, int h_)
 	redraw();
 }
 
-void PlotWindow::draw()
+void Window::draw()
 {
 	fps.frame();
 	doc.draw();
 	need_redraw = false;
+}
+int Window::current_fps() const
+{
+	return animating() ? (int)std::round(fps.fps()) : -1;
 }

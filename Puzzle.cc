@@ -182,13 +182,31 @@ void Puzzle::pick_up(Piece i)
 		assert(it == z.begin()+N-1);
 		z[N-1] = i;
 	}
-	else
+	else if (!is_big_border_group(i))
 	{
 		auto &G = groups[g[i]];
 		auto it = std::remove_if(z.begin(), z.end(), [&G](Piece p){ return G.count(p) > 0; });
 		assert(it == z.begin()+N-G.size());
 		int i = N-G.size();
 		for (Piece j : G) z[i++] = j;
+	}
+	else
+	{
+		auto &G = groups[g[i]];
+		bool all_good = true; // is the entire group at bottom already?
+		for (int i = 0; i < (int)G.size(); ++i)
+		{
+			if (G.count(z[i])) continue;
+			all_good = false;
+			break;
+		}
+		if (all_good) return;
+
+		auto it = std::remove_if(z.begin(), z.end(), [&G](Piece p){ return G.count(p) > 0; });
+		assert(it == z.begin()+N-G.size());
+		int i = N-G.size();
+		while (--i >= 0) z[i+G.size()] = z[i];
+		i = 0; for (Piece j : G) z[i++] = j;
 	}
 
 	sanity_checks();
@@ -338,5 +356,25 @@ bool Puzzle::connect(Piece i, float delta_max)
 	sanity_checks();
 
 	return true;
+}
+
+bool Puzzle::is_big_border_group(Piece i) const
+{
+	// big border group = group containing more than half the edge pieces
+	if (i < 0 || i >= N) return false;
+	if (g[i] < 0 || groups[g[i]].size() <= W+H-1) return false; // wrong for W or H == 1, but that's ok
+	// total size is not enough - we need to count the number of border pieces:
+	auto &G = groups[g[i]]; int n = 0;
+	for (int x = 0; x < W; ++x)
+	{
+		if (G.count(x)) ++n;
+		if (G.count(W*(H-1)+x)) ++n;
+	}
+	for (int y = 1; y < H-1; ++y)
+	{
+		if (G.count(W*y)) ++n;
+		if (G.count(W*y+W-1)) ++n;
+	}
+	return n > W+H-1;
 }
 

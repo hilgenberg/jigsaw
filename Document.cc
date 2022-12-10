@@ -1,7 +1,9 @@
 #include "Document.h"
 #include "../Persistence/Serializer.h"
 #include "shaders.h"
-#include "OpenGL/GL_Util.h"
+#include "Utility/GL_Util.h"
+#include "Utility/Histogram.h"
+#include "Utility/Preferences.h"
 #include <map>
 #include <vector>
 #include <cassert>
@@ -9,8 +11,6 @@
 #include <GL/glu.h>
 #include <iostream>
 #include <sstream>
-#include "Histogram.h"
-#include "Utility/Preferences.h"
 
 //------------------------------------------------------------------
 // construction and drawing
@@ -20,7 +20,9 @@ static GLuint program = 0;
 static GLuint bg_program = 0;
 static GLuint VBO[2] = {0,0}, VAO[2] = {0,0}; // use double buffering for data to avoid stalls in glMap
 static int current_buf = 0;
-static GLuint texture = 0; 
+static GLuint texture = 0;
+static int loaded_edge = -1; // which edge type is in program?
+static float d1 = 0.0f, d0 = 0.0f; // for the "overhang" uniform
 
 Document::Document()
 : bg(0.25f)
@@ -42,16 +44,6 @@ bool Document::load(const std::string &p, int N)
 }
 void Document::init()
 {
-	if (!program)
-	{
-		std::map<GLuint, const char *> shaders = {
-			{GL_VERTEX_SHADER,   vertex},
-			{GL_GEOMETRY_SHADER, geometry},
-			{GL_FRAGMENT_SHADER, fragment}
-		};
-		program = compileShaders(shaders);
-		GL_CHECK;
-	}
 	if (!bg_program)
 	{
 		std::map<GLuint, const char *> shaders = {
@@ -136,6 +128,30 @@ void Document::draw()
 	GL_CHECK;
 	if (camera.empty()) return;
 
+	if (!program || loaded_edge != Preferences::edge())
+	{
+		if (program) { glDeleteProgram(program); program = 0; }
+
+		const char *frag = NULL;
+		switch (loaded_edge = Preferences::edge())
+		{
+			case None:    frag = fragment_none;    d1 = d0 = 0.0f; break;
+			case Regular: frag = fragment_regular; d1 = 0.15f; d0 = 0.08578643762690485f; break;
+			case Linear:  frag = fragment_tri;     d1 = 0.15f; d0 = 0.05f; break;
+			case Groove:  frag = fragment_rect;    d1 = d0 = 0.024f; break;
+			case Circle:  frag = fragment_circle;  d1 = 0.2f; d0 = 0.0f; break;
+			default: assert(false);
+		}
+
+		std::map<GLuint, const char *> shaders = {
+			{GL_VERTEX_SHADER,   vertex},
+			{GL_GEOMETRY_SHADER, geometry},
+			{GL_FRAGMENT_SHADER, frag}
+		};
+		program = compileShaders(shaders);
+		GL_CHECK;
+	}
+
 	// clear background
 	bg.set_clear();
 	glClearDepth(1.0);
@@ -181,6 +197,9 @@ void Document::draw()
 	glUniform1i(1, 0); // wants the texture unit, not the texture ID!
 	glUniform2i(2, W, H);
 	glUniform2f(3, puzzle.sx, puzzle.sy);
+	glUniform2f(4, d1, d0);
+
+
 	GL_CHECK;
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
@@ -277,6 +296,7 @@ void Document::arrange()
 }
 
 static void edge_bbox(const Puzzle &puzzle, float &x0, float &x1, float &y0, float &y1)
+// bbox without the edge pieces
 {
 	if (puzzle.W < 2 || puzzle.H < 2) { x0 = x1 = y0 = y1 = 0.0f; return; }
 	int W = puzzle.W, H = puzzle.H;
@@ -329,7 +349,7 @@ static void pack_edge(Puzzle &puzzle, std::vector<int> &P, P2f c, P2f r, float w
 
 void Document::arrange_edges()
 {
-	if (puzzle.W < 2 || puzzle.H < 2) { arrange(); return; }
+	if (puzzle.W < 2 || puzzle.H < 2 || Preferences::edge() == None) { arrange(); return; }
 	int W = puzzle.W, H = puzzle.H, N = puzzle.N;
 	float X0, X1, Y0, Y1; edge_bbox(puzzle, X0, X1, Y0, Y1);
 	if (X0 > -0.5f*W) X0 = -0.5f*W;
@@ -362,45 +382,38 @@ void Document::arrange_edges()
 	pack_edge(puzzle, P, P2f(X0-w, Ym-0.5f*h), P2f(0.0f, Y0-Y1), h, w);
 }
 
-void Document::move(int piece, double R)
+static void hide(Puzzle &puzzle, int piece)
 {
+	double R = 1.25*hypot(puzzle.W, puzzle.H);
+	double x = rand01(); R += 5.0*x*x;
 	assert(piece >= 0 && piece < puzzle.N);
 	P2d p = (P2d)puzzle.pos[piece];
 	p.x += 0.5; p.x *= puzzle.sx;
 	p.y += 0.5; p.y *= puzzle.sy;
-	p -= camera.center;
 	p.to_unit();
 	if (!std::isfinite(p.x)) p.set(-1.0, 0.0);
 	p *= R;
-	p += camera.center;
 	p.x -= 0.5*puzzle.sx;
 	p.y -= 0.5*puzzle.sy;
 	puzzle.move(piece, p.x, p.y, true);
 }
 
-static double rand_dr()
-{
-	double x = rand01();
-	return 5.0*x*x;
-}
-
 void Document::hide(int piece, bool and_similar)
 {
 	if (piece < 0 || piece >= puzzle.N) return;
-	double R0 = std::max(1.5*camera.range.abs(), hypot(puzzle.W, puzzle.H));
-
 	if (and_similar)
 	{
 		if (!histo) histo.reset(new Histogram(im, puzzle.W, puzzle.H));
 		for (int i = 0; i < puzzle.N; ++i)
 		{
 			if (puzzle.g[i] >= 0) continue;
-			if (histo->distance(piece, i) < 0.2) move(i, R0 + rand_dr());
+			//if (histo->distance(piece, i) < 0.2) ::hide(puzzle, i);
+			if (histo->similarity(piece, i) > 0.7) ::hide(puzzle, i);
 		}
 	}
 	else
 	{
-		move(piece, R0 + rand_dr());
+		::hide(puzzle, piece);
 	}
 }
 
@@ -413,13 +426,18 @@ int Document::hit_test(int mx, int my, bool pick_up, P2f &rel)
 	if (pick_up && i >= 0) puzzle.pick_up(i);
 	return i;
 }
-void Document::drag(int piece, const P2f &rel, int mx, int my, P2d &v)
+void Document::drag(int piece, const P2f &rel, int mx, int my, P2d &v, double mdx, double mdy)
 {
 	int w = camera.screen_w(), h = camera.screen_h();
 	int pn = std::min(w, h) / 10;
+	P2d v0 = v;
 	v.clear();
 	if (mx <= pn) v.x = (double)(pn-mx)/pn; else if (mx >= w-1-pn) v.x = -(double)(mx-(w-1-pn))/pn;
 	if (my <= pn) v.y = (double)(pn-my)/pn; else if (my >= h-1-pn) v.y = -(double)(my-(h-1-pn))/pn;
+	if (mdx >= 0) v.x = std::min(v0.x, v.x);
+	if (mdx <= 0) v.x = std::max(v0.x, v.x);
+	if (mdy >= 0) v.y = std::min(v0.y, v.y);
+	if (mdy <= 0) v.y = std::max(v0.y, v.y);
 
 	if (piece < 0 || piece >= puzzle.N) return;
 	auto p = camera.convert(mx, my);

@@ -1,6 +1,7 @@
 #include <signal.h>
-#include "PlotWindow.h"
+#include "Window.h"
 #include "Utility/Preferences.h"
+#include "Utility/GL_Util.h"
 #include "GUI.h"
 #include <SDL.h>
 #include <SDL_opengl.h>
@@ -169,8 +170,7 @@ int main(int argc, char *argv[])
 		if (n > 0) Preferences::pieces(n);
 
 		GL_CHECK;
-		GL_Context context(gl_context);
-		PlotWindow w(window, context, doc);
+		Window w(window, doc);
 		GUI gui(window, gl_context, w);
 
 		GL_CHECK;
