@@ -5,7 +5,6 @@
 #include "GUI.h"
 #include <SDL.h>
 #include <SDL_opengl.h>
-#include <SDL_mixer.h>
 
 volatile bool quit = false;
 static void signalHandler(int)
@@ -108,12 +107,6 @@ int main(int argc, char *argv[])
 	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
 	SDL_GL_MakeCurrent(window, gl_context);
 	SDL_GL_SetSwapInterval(Preferences::vsync());
-
-	//Initialize SDL_mixer
-	if (Mix_OpenAudio(MIX_DEFAULT_FREQUENCY, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, 512) < 0)
-	{
-		fprintf(stderr, "SDL audio error: %s\n", Mix_GetError());
-	}
 
 	if (glewInit() != GLEW_OK)
 	{
@@ -227,8 +220,6 @@ int main(int argc, char *argv[])
 
 	SDL_GL_DeleteContext(gl_context);
 	SDL_DestroyWindow(window);
-	Mix_CloseAudio();
-	Mix_Quit();
 	SDL_Quit();
 	
 	if (retcode == 0)

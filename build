@@ -69,8 +69,6 @@ def getf(cmd):
 # add SDL2
 cflags += " " + getf('sdl2-config --cflags')
 lflags += " " + getf('sdl2-config --libs')
-cflags += " " + getf('pkg-config --cflags SDL2_mixer')
-lflags += " " + getf('pkg-config --libs   SDL2_mixer')
 # add dear imgui
 imgui_dir = "imgui"
 imgui_cc  = ["imgui.cpp", "imgui_demo.cpp", "imgui_draw.cpp", "imgui_tables.cpp", 

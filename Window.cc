@@ -10,12 +10,30 @@
 #include <GL/gl.h>
 #include <cassert>
 #include <algorithm>
-#include <SDL_mixer.h>
-
+#include <SDL.h>
 extern const std::vector<unsigned char> &click_data();
-static Mix_Chunk *click_wav = NULL;
-
 extern volatile bool quit;
+
+static Uint8 *audio_buf = NULL;
+static Uint32 audio_len = 0;
+static SDL_AudioDeviceID audio_device = 0;
+static int audio_pos = 0;
+
+static void sfx(void *unused, Uint8 *buf, int len)
+{
+	//printf("sfx %d %d\n", audio_pos, len);
+	int n = audio_pos < audio_len ? std::min(len, (int)(audio_len-audio_pos)) : 0;
+	memcpy(buf, audio_buf+audio_pos, n);
+	audio_pos += n;
+	memset(buf+n, 0, len-n);
+	if (audio_pos >= audio_len) SDL_PauseAudioDevice(audio_device, true);
+}
+
+static void play_click()
+{
+	audio_pos = 0;
+	SDL_PauseAudioDevice(audio_device, false);
+}
 
 static inline double absmax(double a, double b){ return fabs(a) > fabs(b) ? a : b; }
 
@@ -28,16 +46,21 @@ Window::Window(SDL_Window* window, Document &doc)
 , doc(doc)
 , drag_v(0.0, 0.0)
 {
-	if (!click_wav)
-	{
-		auto &sd = click_data();
-		SDL_RWops *io = SDL_RWFromConstMem((const void*)sd.data(), (int)sd.size());
-		if (io) click_wav = Mix_LoadWAV_RW(io, true);
-	}
+	auto &sd = click_data();
+	SDL_RWops *io = SDL_RWFromConstMem((const void*)sd.data(), (int)sd.size());
+	SDL_AudioSpec as; SDL_zero(as);
+	if (!SDL_LoadWAV_RW(io, true/*free io*/, &as, &audio_buf, &audio_len))
+		fprintf(stderr, "loading audio failed!\n");
+
+	as.samples = 1024;
+	as.callback = sfx;
+	SDL_AudioSpec as2; SDL_zero(as2);
+	audio_device = SDL_OpenAudioDevice(NULL, 0, &as, &as2, SDL_AUDIO_ALLOW_ANY_CHANGE);
 }
 Window::~Window()
 {
-	if (click_wav) { Mix_FreeChunk(click_wav); click_wav = NULL; }
+	SDL_CloseAudioDevice(audio_device);
+	SDL_FreeWAV(audio_buf);
 }
 
 void Window::start_animations() { if (tnf <= 0.0) last_frame = tnf = now(); }
@@ -172,10 +195,7 @@ bool Window::handle_event(const SDL_Event &e)
 			if (dragging >= 0)
 			{
 				bool c = doc.drop(dragging);
-				if (c && click_wav)
-				{
-					Mix_PlayChannel(0, click_wav, 0);
-				}
+				if (c) play_click();
 			}
 			dragging = -1; drag_v.clear();
 			redraw();
