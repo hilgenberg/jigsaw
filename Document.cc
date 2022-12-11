@@ -138,7 +138,7 @@ void Document::draw()
 			case None:    frag = fragment_none;    d1 = d0 = 0.0f; break;
 			case Regular: frag = fragment_regular; d1 = 0.15f; d0 = 0.08578643762690485f; break;
 			case Linear:  frag = fragment_tri;     d1 = 0.15f; d0 = 0.05f; break;
-			case Groove:  frag = fragment_rect;    d1 = d0 = 0.024f; break;
+			case Groove:  frag = fragment_rect;    d1 = d0 = 0.034f; break;
 			case Circle:  frag = fragment_circle;  d1 = 0.2f; d0 = 0.0f; break;
 			default: assert(false);
 		}

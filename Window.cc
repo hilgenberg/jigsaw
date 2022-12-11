@@ -3,36 +3,27 @@
 #include "Camera.h"
 #include "Utility/StringFormatting.h"
 #include "Utility/Preferences.h"
-#include "Utility/GL_Color.h"
 #include "Utility/GL_Util.h"
 #include "Utility/Timer.h"
 #include "Utility/Preferences.h"
 #include <GL/gl.h>
-#include <cassert>
-#include <algorithm>
 #include <SDL.h>
+#include <AL/al.h>
+#include <AL/alc.h>
+#include <AL/alut.h>
 extern const std::vector<unsigned char> &click_data();
 extern volatile bool quit;
 
-static Uint8 *audio_buf = NULL;
-static Uint32 audio_len = 0;
-static SDL_AudioDeviceID audio_device = 0;
-static int audio_pos = 0;
+static ALuint buffer = 0, source = 0;
 
-static void sfx(void *unused, Uint8 *buf, int len)
-{
-	//printf("sfx %d %d\n", audio_pos, len);
-	int n = audio_pos < audio_len ? std::min(len, (int)(audio_len-audio_pos)) : 0;
-	memcpy(buf, audio_buf+audio_pos, n);
-	audio_pos += n;
-	memset(buf+n, 0, len-n);
-	if (audio_pos >= audio_len) SDL_PauseAudioDevice(audio_device, true);
-}
+#define TEST_ERROR(_msg) do {\
+	ALCenum error = alGetError();\
+	if (error != AL_NO_ERROR) fprintf(stderr, "OpenAL Error: " _msg "\n");\
+	}while(0)
 
 static void play_click()
 {
-	audio_pos = 0;
-	SDL_PauseAudioDevice(audio_device, false);
+	alSourcePlay(source); TEST_ERROR("source playing");
 }
 
 static inline double absmax(double a, double b){ return fabs(a) > fabs(b) ? a : b; }
@@ -46,21 +37,24 @@ Window::Window(SDL_Window* window, Document &doc)
 , doc(doc)
 , drag_v(0.0, 0.0)
 {
+	ALfloat orientation[] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };
+	alListener3f(AL_POSITION, 0, 0, 1.0f); TEST_ERROR("listener position");
+    	alListener3f(AL_VELOCITY, 0, 0, 0); TEST_ERROR("listener velocity");
+	alListenerfv(AL_ORIENTATION, orientation); TEST_ERROR("listener orientation");
+	alGenSources((ALuint)1, &source); TEST_ERROR("source generation");
+	alSourcef(source, AL_PITCH, 1); TEST_ERROR("source pitch");
+	alSourcef(source, AL_GAIN, 1); TEST_ERROR("source gain");
+	alSource3f(source, AL_POSITION, 0, 0, 0); TEST_ERROR("source position");
+	alSource3f(source, AL_VELOCITY, 0, 0, 0); TEST_ERROR("source velocity");
+	alSourcei(source, AL_LOOPING, AL_FALSE); TEST_ERROR("source looping");
 	auto &sd = click_data();
-	SDL_RWops *io = SDL_RWFromConstMem((const void*)sd.data(), (int)sd.size());
-	SDL_AudioSpec as; SDL_zero(as);
-	if (!SDL_LoadWAV_RW(io, true/*free io*/, &as, &audio_buf, &audio_len))
-		fprintf(stderr, "loading audio failed!\n");
-
-	as.samples = 1024;
-	as.callback = sfx;
-	SDL_AudioSpec as2; SDL_zero(as2);
-	audio_device = SDL_OpenAudioDevice(NULL, 0, &as, &as2, SDL_AUDIO_ALLOW_ANY_CHANGE);
+	buffer = alutCreateBufferFromFileImage(sd.data(), sd.size());
+	alSourcei(source, AL_BUFFER, buffer); TEST_ERROR("buffer binding");
 }
 Window::~Window()
 {
-	SDL_CloseAudioDevice(audio_device);
-	SDL_FreeWAV(audio_buf);
+	alDeleteSources(1, &source);
+	alDeleteBuffers(1, &buffer);
 }
 
 void Window::start_animations() { if (tnf <= 0.0) last_frame = tnf = now(); }

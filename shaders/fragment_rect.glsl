@@ -18,7 +18,7 @@ void main()
 	const float bb = tx(border>>6);
 
 	// for geo shader: overhang[0] = overhang[1] = h
-	float h = 0.024, r = 0.2;
+	float h = 0.034, r = 0.2;
 	if (bt*abs(orig.x-0.5) > bt*r && orig.y <     h) discard;
 	if (bb*abs(orig.x-0.5) > bb*r && orig.y > 1.0-h) discard;
 	if (bl*abs(orig.y-0.5) > bl*r && orig.x <     h) discard;
