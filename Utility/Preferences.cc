@@ -10,7 +10,9 @@ static bool have_changes = false; // were any defaults changed?
 static bool vsync_     = true;
 static int  fps_       = 60;
 static std::string image_;
-static int pieces_     = 256;
+static int  pieces_    = 256;
+static int  alpha_     = 0;
+static bool absmode_   = false;
 static EdgeType edge_  = Regular;
 
 namespace Preferences
@@ -42,6 +44,8 @@ namespace Preferences
 		fps_       = 60;
 		pieces_    = 256;
 		edge_      = Regular;
+		alpha_     = 0;
+		absmode_   = false;
 		image_.clear();
 		load(); have_changes = false;
 		return true;
@@ -55,6 +59,16 @@ namespace Preferences
 
 	int  fps() { return fps_; }
 	void fps(int value) { SET(fps_); }
+
+	float solution_alpha() { return alpha_ / 1023.0f; }
+	void solution_alpha(float value) {
+		int v = (int)(value*1023.0f);
+		if (alpha_==v) return;
+		alpha_ = v; have_changes = true;
+	}
+
+	bool absolute_mode() { return absmode_; }
+	void absolute_mode(bool value) { SET(absmode_); }
 
 	int  pieces() { return pieces_; }
 	void pieces(int value) { SET(pieces_); }
@@ -158,6 +172,8 @@ static bool load()
 		else if (key == "vsync"    ) parse(v, vsync_);
 		else if (key == "fps"      ) parse(v, fps_);
 		else if (key == "image"    ) image_ = value;
+		else if (key == "alpha"    ) parse(v, alpha_);
+		else if (key == "abs"      ) parse(v, absmode_);
 		else if (key == "edge"     ) parse(v, (int&)edge_);
 		else
 		{
@@ -184,6 +200,8 @@ static bool save()
 	fprintf(file, "fps=%d\n", fps_);
 	fprintf(file, "vsync=%s\n", vsync_ ? "on" : "off");
 	fprintf(file, "image=%s\n", image_.c_str());
+	fprintf(file, "alpha=%d\n", alpha_);
+	fprintf(file, "abs=%s\n", absmode_ ? "on" : "off");
 	fprintf(file, "edge=%d\n", (int)edge_);
 	fclose (file);
 	have_changes = false;

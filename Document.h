@@ -13,13 +13,13 @@ struct Document : public Serializable
 	~Document();
 
 	bool load(const std::string &im_path, int n = -1);
-
-	void save(Serializer &s) const;
 	void load(Deserializer &s);
+	void save(Serializer &s) const;
 
 	void draw();
 
 	int hit_test(int mx, int my, bool pick_up, P2f &rel);
+
 	void drag(int piece, const P2f &rel, int mx, int my, P2d &v, double mdx = 0, double mdy = 0);
 	bool drop(int piece);
 	

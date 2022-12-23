@@ -26,26 +26,6 @@ struct GL_Color : public Serializable
 		float v[4];
 	};
 	
-	#ifdef _WINDOWS
-	operator COLORREF() const { return RGB(int(r*255.0f), int(g*255.0f), int(b*255.0f)); }
-	
-	Gdiplus::Color convert() const
-	{
-		return Gdiplus::Color(BYTE(a*255.0f), BYTE(r*255.0f), BYTE(g*255.0f), BYTE(b*255.0f));
-	}
-	
-	GL_Color &operator= (COLORREF c)
-	{
-		r = GetRValue(c) / 255.0f;
-		g = GetGValue(c) / 255.0f;
-		b = GetBValue(c) / 255.0f;
-		// alpha is not changed!
-		return *this;
-	}
-	int  GetAlpha() const { return int(a*255.0f); }
-	void SetAlpha(int a_) { a = a_ / 255.0f; }
-	#endif
-
 	void clamp()
 	{
 		if (r < 0.0f) r = 0.0f; if (r > 1.0f) r = 1.0f;

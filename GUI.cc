@@ -83,6 +83,14 @@ void GUI::update()
 	ImGui::Combo("Edges", &i, edges, 5);
 	if (i != i0) Preferences::edge((EdgeType)i);
 
+	float f0, f = Preferences::solution_alpha(); f0 = f;
+	ImGui::SliderFloat("##Solution Alpha", &f, 0.0f, 1.0f, "Solution Alpha: %.3f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_NoInput);
+	if (f != f0) Preferences::solution_alpha(f);
+
+	b0 = Preferences::absolute_mode(); b = b0;
+	ImGui::Checkbox("Absolute Mode", &b);
+	if (b != b0) Preferences::absolute_mode(b);
+
 	ImGui::Text("Animation FPS limit (-1 for none)");
 	i0 = Preferences::fps(); i = i0;
 	ImGui::InputInt("##fps", &i, 1, 0);

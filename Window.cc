@@ -1,30 +1,16 @@
 #include "Window.h"
 #include "Document.h"
 #include "Camera.h"
+#include "Audio.h"
 #include "Utility/StringFormatting.h"
 #include "Utility/Preferences.h"
 #include "Utility/GL_Util.h"
 #include "Utility/Timer.h"
 #include "Utility/Preferences.h"
+#include "Victory.h"
 #include <GL/gl.h>
 #include <SDL.h>
-#include <AL/al.h>
-#include <AL/alc.h>
-#include <AL/alut.h>
-extern const std::vector<unsigned char> &click_data();
 extern volatile bool quit;
-
-static ALuint buffer = 0, source = 0;
-
-#define TEST_ERROR(_msg) do {\
-	ALCenum error = alGetError();\
-	if (error != AL_NO_ERROR) fprintf(stderr, "OpenAL Error: " _msg "\n");\
-	}while(0)
-
-static void play_click()
-{
-	alSourcePlay(source); TEST_ERROR("source playing");
-}
 
 static inline double absmax(double a, double b){ return fabs(a) > fabs(b) ? a : b; }
 
@@ -36,25 +22,8 @@ Window::Window(SDL_Window* window, Document &doc)
 , window(window)
 , doc(doc)
 , drag_v(0.0, 0.0)
+, buttons(*this)
 {
-	ALfloat orientation[] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };
-	alListener3f(AL_POSITION, 0, 0, 1.0f); TEST_ERROR("listener position");
-    	alListener3f(AL_VELOCITY, 0, 0, 0); TEST_ERROR("listener velocity");
-	alListenerfv(AL_ORIENTATION, orientation); TEST_ERROR("listener orientation");
-	alGenSources((ALuint)1, &source); TEST_ERROR("source generation");
-	alSourcef(source, AL_PITCH, 1); TEST_ERROR("source pitch");
-	alSourcef(source, AL_GAIN, 1); TEST_ERROR("source gain");
-	alSource3f(source, AL_POSITION, 0, 0, 0); TEST_ERROR("source position");
-	alSource3f(source, AL_VELOCITY, 0, 0, 0); TEST_ERROR("source velocity");
-	alSourcei(source, AL_LOOPING, AL_FALSE); TEST_ERROR("source looping");
-	auto &sd = click_data();
-	buffer = alutCreateBufferFromFileImage(sd.data(), sd.size());
-	alSourcei(source, AL_BUFFER, buffer); TEST_ERROR("buffer binding");
-}
-Window::~Window()
-{
-	alDeleteSources(1, &source);
-	alDeleteBuffers(1, &buffer);
 }
 
 void Window::start_animations() { if (tnf <= 0.0) last_frame = tnf = now(); }
@@ -76,6 +45,14 @@ void Window::animate()
 
 	double dt = std::min(std::max(1e-42, t - last_frame), 0.25);
 	last_frame = t;
+
+	if (va)
+	{
+		va->run(dt);
+		if (!va->done()) { redraw(); return; }
+		va = nullptr;
+		play_click();
+	}
 
 	double dx = 0.0, dy = 0.0, dz = 0.0;
 
@@ -134,6 +111,8 @@ void Window::animate()
 
 bool Window::handle_event(const SDL_Event &e)
 {
+	if (buttons.handle_event(e)) return true;
+
 	switch (e.type)
 	{
 		case SDL_WINDOWEVENT:
@@ -142,8 +121,6 @@ bool Window::handle_event(const SDL_Event &e)
 				case SDL_WINDOWEVENT_CLOSE:
 					if (e.window.windowID == SDL_GetWindowID(window))
 					{
-						// TODO: get SDL to ask before closing, so we can
-						// confirm if file was changed!
 						quit = true;
 						return true;
 					}
@@ -162,7 +139,7 @@ bool Window::handle_event(const SDL_Event &e)
 
 		case SDL_MOUSEBUTTONDOWN:
 		{
-			if (e.button.button != SDL_BUTTON_LEFT) return true;
+			if (va || e.button.button != SDL_BUTTON_LEFT) return true;
 			SDL_Keymod m = SDL_GetModState();
 			bool shift   = (m & (KMOD_LSHIFT|KMOD_RSHIFT));
 			bool ctrl    = (m & (KMOD_LCTRL|KMOD_RCTRL));
@@ -189,14 +166,22 @@ bool Window::handle_event(const SDL_Event &e)
 			if (dragging >= 0)
 			{
 				bool c = doc.drop(dragging);
-				if (c) play_click();
+				if (c)
+				{
+					play_click();
+					if (doc.puzzle.solved() && !va)
+					{
+						va.reset(new VictoryAnimation(doc.puzzle, doc.camera));
+						start_animations();
+					}
+				}
 			}
 			dragging = -1; drag_v.clear();
 			redraw();
 			return true;
 		case SDL_MOUSEMOTION:
 		{
-			if (dragging < -1) return true;
+			if (va || dragging < -1) return true;
 
 			auto buttons = e.motion.state;
 			//static int i = 0; ++i; i %=10;
@@ -238,6 +223,7 @@ bool Window::handle_event(const SDL_Event &e)
 		}
 		case SDL_MOUSEWHEEL:
 		{
+			if (va) return true;
 			SDL_Keymod m = SDL_GetModState();
 			bool shift   = (m & (KMOD_LSHIFT|KMOD_RSHIFT));
 
@@ -294,24 +280,27 @@ bool Window::handle_key(SDL_Keysym keysym, bool release)
 			if (!ikeys.count(key)) ikeys[key] = 0.0;
 			start_animations();
 			return true;
-	
-		case SDLK_0: case SDLK_1: case SDLK_2: case SDLK_3: case SDLK_4:
-		case SDLK_5: case SDLK_6: case SDLK_7: case SDLK_8: case SDLK_9:
-			if (!keys.count(key)) redraw();
-			keys.insert(key);
-			return true;
 		
 		case SDLK_SPACE:
 			if (ctrl) doc.arrange();
 			else doc.reset_view();
 			redraw();
 			start_animations();
-			break;
+			return true;
 		case SDLK_e:
 			doc.arrange_edges();
 			redraw();
 			start_animations();
-			break;
+			return true;
+		#ifdef DEBUG
+		case SDLK_a:
+			if (!va)
+			{
+				va.reset(new VictoryAnimation(doc.puzzle, doc.camera));
+				start_animations();
+			}
+			return true;
+		#endif
 	}
 	else switch (key)
 	{
@@ -319,12 +308,6 @@ bool Window::handle_key(SDL_Keysym keysym, bool release)
 		case SDLK_UP:   case SDLK_DOWN:
 		case SDLK_PLUS: case SDLK_MINUS:
 			ikeys.erase(key);
-			return true;
-	
-		case SDLK_0: case SDLK_1: case SDLK_2: case SDLK_3: case SDLK_4:
-		case SDLK_5: case SDLK_6: case SDLK_7: case SDLK_8: case SDLK_9:
-			if (keys.count(key)) redraw();
-			keys.erase(key);
 			return true;
 	}
 	return false;
@@ -342,10 +325,12 @@ void Window::reshape(int w_, int h_)
 
 void Window::draw()
 {
+	need_redraw = false;
 	fps.frame();
 	doc.draw();
-	need_redraw = false;
+	buttons.draw();
 }
+
 int Window::current_fps() const
 {
 	return animating() ? (int)std::round(fps.fps()) : -1;

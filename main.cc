@@ -3,11 +3,9 @@
 #include "Utility/Preferences.h"
 #include "Utility/GL_Util.h"
 #include "GUI.h"
+#include "Audio.h"
 #include <SDL.h>
 #include <SDL_opengl.h>
-#include <AL/al.h>
-#include <AL/alc.h>
-#include <AL/alut.h>
 
 volatile bool quit = false;
 static void signalHandler(int)
@@ -55,7 +53,7 @@ int main(int argc, char *argv[])
 {
 	Preferences::reset();
 
-	if (!alutInit(&argc, argv))
+	if (!audio_init(argc, argv))
 	{
 		fprintf(stderr, "ALUT init failed! Audio will be broken.\n");
 	}
@@ -229,6 +227,7 @@ int main(int argc, char *argv[])
 	SDL_GL_DeleteContext(gl_context);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
+	audio_quit();
 	
 	if (retcode == 0)
 	{

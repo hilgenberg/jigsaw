@@ -4,30 +4,26 @@
 #include "Utility/GL_Util.h"
 #include "Utility/Histogram.h"
 #include "Utility/Preferences.h"
-#include <map>
-#include <vector>
-#include <cassert>
 #include <GL/gl.h>
 #include <GL/glu.h>
-#include <iostream>
-#include <sstream>
 
 //------------------------------------------------------------------
 // construction and drawing
 //------------------------------------------------------------------
 
 static GLuint program = 0;
-static GLuint bg_program = 0;
+static GLuint bg_program[2] = {0};
 static GLuint VBO[2] = {0,0}, VAO[2] = {0,0}; // use double buffering for data to avoid stalls in glMap
-static int current_buf = 0;
 static GLuint texture = 0;
-static int loaded_edge = -1; // which edge type is in program?
-static float d1 = 0.0f, d0 = 0.0f; // for the "overhang" uniform
+static int    current_buf = 0;
+static int    loaded_edge = -1; // which edge type is in program?
+static float  d1 = 0.0f, d0 = 0.0f; // for the "overhang" uniform
 
 Document::Document()
 : bg(0.25f)
 {
 }
+
 bool Document::load(const std::string &p, int N)
 {
 	if (N <= 0) N = Preferences::pieces();
@@ -42,15 +38,46 @@ bool Document::load(const std::string &p, int N)
 	init();
 	return true;
 }
+
+void Document::load(Deserializer &s)
+{
+	free_all();
+	s.string_(im_path);
+	s.member_(puzzle);
+	s.member_(camera);
+	s.marker_("EOF.");
+	im.load(im_path); histo = nullptr;
+	if (puzzle.solved())
+	{
+		puzzle.reset(im.w(), im.h(), puzzle.N);
+		puzzle.shuffle(false);
+	}
+	init();
+}
+void Document::save(Serializer &s) const
+{
+	s.string_(im_path);
+	s.member_(puzzle);
+	s.member_(camera);
+	s.marker_("EOF.");
+}
+
 void Document::init()
 {
-	if (!bg_program)
+	if (!bg_program[0])
 	{
 		std::map<GLuint, const char *> shaders = {
 			{GL_VERTEX_SHADER,   bg_vertex},
-			{GL_FRAGMENT_SHADER, bg_fragment}
+			{GL_FRAGMENT_SHADER, bg_fragment_checker}
 		};
-		bg_program = compileShaders(shaders);
+		bg_program[0] = compileShaders(shaders);
+		GL_CHECK;
+
+		 shaders = std::map<GLuint, const char *>{
+			{GL_VERTEX_SHADER,   bg_vertex},
+			{GL_FRAGMENT_SHADER, bg_fragment_image}
+		};
+		bg_program[1] = compileShaders(shaders);
 		GL_CHECK;
 	}
 
@@ -100,24 +127,6 @@ void Document::free_all()
 	glDeleteTextures(1, &texture); texture = 0;
 }
 
-void Document::load(Deserializer &s)
-{
-	free_all();
-	s.string_(im_path);
-	s.member_(puzzle);
-	s.member_(camera);
-	s.marker_("EOF.");
-	im.load(im_path); histo = nullptr;
-	init();
-}
-void Document::save(Serializer &s) const
-{
-	s.string_(im_path);
-	s.member_(puzzle);
-	s.member_(camera);
-	s.marker_("EOF.");
-}
-
 template<typename T> struct Reversed             { T& it; };
 template<typename T> auto   begin(Reversed<T> w) { return std::rbegin(w.it); }
 template<typename T> auto     end(Reversed<T> w) { return std::rend(w.it); }
@@ -135,13 +144,14 @@ void Document::draw()
 		const char *frag = NULL;
 		switch (loaded_edge = Preferences::edge())
 		{
-			case None:    frag = fragment_none;    d1 = d0 = 0.0f; break;
-			case Regular: frag = fragment_regular; d1 = 0.15f; d0 = 0.08578643762690485f; break;
-			case Linear:  frag = fragment_tri;     d1 = 0.15f; d0 = 0.05f; break;
-			case Groove:  frag = fragment_rect;    d1 = d0 = 0.034f; break;
-			case Circle:  frag = fragment_circle;  d1 = 0.2f; d0 = 0.0f; break;
+			case None:     frag = fragment_none; break;
+			case Regular:  frag = fragment_regular; break;
+			case Triangle: frag = fragment_tri; break;
+			case Groove:   frag = fragment_rect; break;
+			case Circle:   frag = fragment_circle; break;
 			default: assert(false);
 		}
+		Puzzle::overhang((EdgeType)loaded_edge, d1, d0);
 
 		std::map<GLuint, const char *> shaders = {
 			{GL_VERTEX_SHADER,   vertex},
@@ -159,10 +169,18 @@ void Document::draw()
 	GL_CHECK;
 
 	// draw assembly area
+	const bool use_image = Preferences::solution_alpha() > 1.0e-5f;
 	glDepthMask(GL_FALSE);
 	glDisable(GL_DEPTH_TEST);
-	glUseProgram(bg_program);
+	glUseProgram(bg_program[use_image]);
 	glBindVertexArray(VAO[2]); // empty but needed
+	if (use_image)
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glUniform1i(2, 0); // wants the texture unit, not the texture ID!
+		glUniform1f(3, Preferences::solution_alpha());
+	}
 	camera.set(0);
 	glUniform2f(1, puzzle.W*puzzle.sx, puzzle.H*puzzle.sy);
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -198,9 +216,8 @@ void Document::draw()
 	glUniform2i(2, W, H);
 	glUniform2f(3, puzzle.sx, puzzle.sy);
 	glUniform2f(4, d1, d0);
-
-
 	GL_CHECK;
+
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
@@ -214,12 +231,9 @@ Document::~Document()
 {
 	free_all();
 	if (program) glDeleteProgram(program); program = 0;
-	if (bg_program) glDeleteProgram(bg_program); bg_program = 0;
+	if (bg_program[0]) glDeleteProgram(bg_program[0]); bg_program[0] = 0;
+	if (bg_program[1]) glDeleteProgram(bg_program[1]); bg_program[1] = 0;
 }
-
-//------------------------------------------------------------------
-// actions
-//------------------------------------------------------------------
 
 void Document::reset_view()
 {
@@ -230,285 +244,4 @@ void Document::reset_view()
 	y0 = std::min(y0, -0.5f*puzzle.H*puzzle.sy);
 	y1 = std::max(y1,  0.5f*puzzle.H*puzzle.sy);
 	camera.view_box(x0, x1, y0, y1, 1.25f);
-}
-
-void Document::arrange()
-{
-	// leave space for assembled pieces
-	float X0, X1, Y0, Y1;
-	puzzle.bbox(X0, X1, Y0, Y1, true);
-	
-	// leave space for assembly area
-	const int W = puzzle.W, H = puzzle.H;
-	if (W*H > 2*(W+H)+4) // only if we can go around fully
-	{
-		if (X0 > -0.5f*W) X0 = -0.5f*W; if (X1 < 0.5f*W) X1 = 0.5f*W;
-		if (Y0 > -0.5f*H) Y0 = -0.5f*H; if (Y1 < 0.5f*H) Y1 = 0.5f*H;
-	}
-	if (X1 > X0+0.123 || Y1 > Y0+0.123)
-	{
-		X0 -= 0.5; X1 += 0.5;
-		Y0 -= 0.5; Y1 += 0.5;
-	}
-
-	const float w = puzzle.sx, h = puzzle.sy;
-#if 0
-	// spiral
-	const double rp = 0.5*1.3*hypot(w, h);
-	P2f c(0.5f*(X0+X1)-0.5f*w, 0.5f*(Y0+Y1)-0.5f*h);
-	double r = 0.5*hypot(X1-X0, Y1-Y0), a = atan2(Y0-Y1, X1-X0);
-	bool ani = (puzzle.N < 1000000);
-	for (int i : puzzle.z)
-	{
-		if (puzzle.g[i] >= 0) continue;
-		float x = c.x + r*sin(a);
-		float y = c.y - r*cos(a);
-		puzzle.move(i, x, y, ani);
-		a += 2.0*rp/r;
-		r += 2.0*rp/r * rp/M_PI;
-	}
-#else
-	const float spcx = 0.3*w + 0.25f, spcy = 0.3*h + 0.25f;
-	int nx = std::ceil((X1-X0-spcx) / (w+spcx));
-	int ny = std::ceil((Y1-Y0-spcy) / (h+spcy));
-	X0 = 0.5f*(X0+X1) - 0.5f*(nx > 0 ? nx*(w+spcx)-spcx : 0.0f);
-	Y0 = 0.5f*(Y0+Y1) - 0.5f*(ny > 0 ? ny*(h+spcy)-spcy : 0.0f);
-
-	int x0 = 0, x1 = nx, y0 = 0, y1 = ny;
-	int ix = 0, iy = -1, dx = 1, dy = 0;
-	if (nx == 0) { dx = 0; dy = 1; }
-
-	bool ani = (puzzle.N < 1000000);
-	for (int i : puzzle.z)
-	{
-		if (puzzle.g[i] >= 0) continue;
-		float x = X0 + ix * (w+spcx);
-		float y = Y0 + iy * (h+spcy);
-		puzzle.move(i, x, y, ani);
-		ix += dx;
-		iy += dy;
-		if      (dx ==  1 && ix >= x1  ) { dx =  0; dy =  1; --y0; }
-		else if (dy ==  1 && iy >= y1  ) { dx = -1; dy =  0; ++x1; }
-		else if (dx == -1 && ix <= x0-1) { dx =  0; dy = -1; ++y1; }
-		else if (dy == -1 && iy <= y0-1) { dx =  1; dy =  0; --x0; }
-	}
-#endif
-}
-
-static void edge_bbox(const Puzzle &puzzle, float &x0, float &x1, float &y0, float &y1)
-// bbox without the edge pieces
-{
-	if (puzzle.W < 2 || puzzle.H < 2) { x0 = x1 = y0 = y1 = 0.0f; return; }
-	int W = puzzle.W, H = puzzle.H;
-	x0 = x1 = puzzle.pos[W+1].x;
-	y0 = y1 = puzzle.pos[W+1].y;
-	for (int y = 1; y < H-1; ++y)
-	{
-		for (int x = 1; x < W-1; ++x)
-		{
-			const P2f &p = puzzle.pos[W*y + x];
-			if (p.x < x0) x0 = p.x;
-			if (p.x > x1) x1 = p.x;
-			if (p.y < y0) y0 = p.y;
-			if (p.y > y1) y1 = p.y;
-		}
-	}
-	x1 += 1.0f;
-	y1 += 1.0f;
-	x0 *= puzzle.sx; x1 *= puzzle.sx;
-	y0 *= puzzle.sy; y1 *= puzzle.sy;
-}
-
-static inline bool even(int i) { return !(i&1); }
-
-static void pack_edge(Puzzle &puzzle, std::vector<int> &P, P2f c, P2f r, float w, float h)
-// c +- r/2 are the edge's endpoints
-// w, h are the pieces' dimensions along and across the edge
-{
-	std::sort(P.begin(), P.end(), [&puzzle](int a, int b) { return puzzle.z[a] > puzzle.z[b]; });
-	const float spcx = 0.3*w + 0.25f, spcy = 0.3*h + 0.25f;
-	float W = r.abs();
-	int nx = std::floor((W-spcx) / (w+spcx));
-	r /= W;
-	P2f s(r.y, -r.x);
-
-	for (int n = 0; n < (int)P.size(); ++n)
-	{
-		int i = P[n];
-		int x = n%nx + 1, y = n / nx;
-		x /= 2; // 0, 1, 1, 2, 2, ...
-		x *= (n&1 ? -1 : 1); // 0, -1, 1, -2, 2, ...
-		P2f p = c + r * (x*(w+spcx)) + s * (y*(h+spcy));
-
-		int nrow = std::min((int)P.size() - nx*y, nx);
-		if (even(nrow)) p += r * (0.5f*(w+spcx));
-
-		puzzle.move(i, p.x, p.y, true);
-	}
-}
-
-void Document::arrange_edges()
-{
-	if (puzzle.W < 2 || puzzle.H < 2 || Preferences::edge() == None) { arrange(); return; }
-	int W = puzzle.W, H = puzzle.H, N = puzzle.N;
-	float X0, X1, Y0, Y1; edge_bbox(puzzle, X0, X1, Y0, Y1);
-	if (X0 > -0.5f*W) X0 = -0.5f*W;
-	if (Y0 > -0.5f*H) Y0 = -0.5f*H;
-	if (X1 <  0.5f*W) X1 =  0.5f*W;
-	if (Y1 <  0.5f*H) Y1 =  0.5f*H;
-	X0 -= 2.0;
-	Y0 -= 2.0;
-	X1 += 2.0;
-	Y1 += 2.0;
-	float Xm = (X0+X1)*0.5f, Ym = (Y0+Y1)*0.5f;
-	float w = puzzle.sx;
-	float h = puzzle.sy;
-
-	if (puzzle.g[0]   < 0) puzzle.move(  0, X0-w, Y0-h, true);
-	if (puzzle.g[W-1] < 0) puzzle.move(W-1, X1,   Y0-h, true);
-	if (puzzle.g[N-W] < 0) puzzle.move(N-W, X0-w, Y1,   true);
-	if (puzzle.g[N-1] < 0) puzzle.move(N-1, X1,   Y1,   true);
-
-	std::vector<int> P; for (int i = 1; i < W-1; ++i) if (puzzle.g[i] < 0) P.push_back(i);
-	pack_edge(puzzle, P, P2f(Xm-0.5f*w, Y0-h), P2f(X1-X0, 0.0f), w, h);
-
-	P.clear(); for (int i = W+W-1; i < N-1; i += W) if (puzzle.g[i] < 0) P.push_back(i);
-	pack_edge(puzzle, P, P2f(X1, Ym-0.5f*h), P2f(0.0f, Y1-Y0), h, w);
-
-	P.clear(); for (int i = (H-1)*W+1; i < N-1; ++i) if (puzzle.g[i] < 0) P.push_back(i);
-	pack_edge(puzzle, P, P2f(Xm-0.5f*w, Y1), P2f(X0-X1, 0.0f), w, h);
-
-	P.clear(); for (int i = W; i < (H-1)*W; i += W) if (puzzle.g[i] < 0) P.push_back(i);
-	pack_edge(puzzle, P, P2f(X0-w, Ym-0.5f*h), P2f(0.0f, Y0-Y1), h, w);
-}
-
-static void hide(Puzzle &puzzle, int piece)
-{
-	double R = 1.25*hypot(puzzle.W, puzzle.H);
-	double x = rand01(); R += 5.0*x*x;
-	assert(piece >= 0 && piece < puzzle.N);
-	P2d p = (P2d)puzzle.pos[piece];
-	p.x += 0.5; p.x *= puzzle.sx;
-	p.y += 0.5; p.y *= puzzle.sy;
-	p.to_unit();
-	if (!std::isfinite(p.x)) p.set(-1.0, 0.0);
-	p *= R;
-	p.x -= 0.5*puzzle.sx;
-	p.y -= 0.5*puzzle.sy;
-	puzzle.move(piece, p.x, p.y, true);
-}
-
-void Document::hide(int piece, bool and_similar)
-{
-	if (piece < 0 || piece >= puzzle.N) return;
-	if (and_similar)
-	{
-		if (!histo) histo.reset(new Histogram(im, puzzle.W, puzzle.H));
-		for (int i = 0; i < puzzle.N; ++i)
-		{
-			if (puzzle.g[i] >= 0) continue;
-			//if (histo->distance(piece, i) < 0.2) ::hide(puzzle, i);
-			if (histo->similarity(piece, i) > 0.7) ::hide(puzzle, i);
-		}
-	}
-	else
-	{
-		::hide(puzzle, piece);
-	}
-}
-
-int Document::hit_test(int mx, int my, bool pick_up, P2f &rel)
-{
-	auto p = camera.convert(mx, my);
-	p.x /= puzzle.sx;
-	p.y /= puzzle.sy;
-	int i = puzzle.hit_test(p, rel);
-	if (pick_up && i >= 0) puzzle.pick_up(i);
-	return i;
-}
-void Document::drag(int piece, const P2f &rel, int mx, int my, P2d &v, double mdx, double mdy)
-{
-	int w = camera.screen_w(), h = camera.screen_h();
-	int pn = std::min(w, h) / 10;
-	P2d v0 = v;
-	v.clear();
-	if (mx <= pn) v.x = (double)(pn-mx)/pn; else if (mx >= w-1-pn) v.x = -(double)(mx-(w-1-pn))/pn;
-	if (my <= pn) v.y = (double)(pn-my)/pn; else if (my >= h-1-pn) v.y = -(double)(my-(h-1-pn))/pn;
-	if (mdx >= 0) v.x = std::min(v0.x, v.x);
-	if (mdx <= 0) v.x = std::max(v0.x, v.x);
-	if (mdy >= 0) v.y = std::min(v0.y, v.y);
-	if (mdy <= 0) v.y = std::max(v0.y, v.y);
-
-	if (piece < 0 || piece >= puzzle.N) return;
-	auto p = camera.convert(mx, my);
-	p.x /= puzzle.sx;
-	p.y /= puzzle.sy;
-	p -= rel;
-	puzzle.move(piece, p, false);
-}
-bool Document::drop(int piece)
-{
-	if (piece < 0 || piece >= puzzle.N) return false;
-	return puzzle.connect(piece, std::max(5.0*camera.pixel_size(), 0.3));
-}
-
-void Document::shovel(int mx, int my, double dx, double dy)
-{
-	P2f c = camera.convert(mx, my);
-	P2f v = camera.dconvert(dx, dy);
-	P2f v0 = v; v0.to_unit();
-	double r = camera.R * 0.25;
-
-	std::vector<int> P;
-	for (int i = 0; i < puzzle.N; ++i)
-	{
-		if (puzzle.g[i] >= 0) continue;
-		P2f p = puzzle.get(i);
-		if ((p-c).absq() > r*r) continue;
-		P.push_back(i);
-	}
-	std::sort(P.begin(), P.end(), [this, &v0, &c, r](int a, int b)
-	{
-		P2f p1 = puzzle.get(a);
-		P2f p2 = puzzle.get(b);
-		double y1 = (p1-c)*v0; assert(fabs(y1) <= r);
-		double y2 = (p2-c)*v0; assert(fabs(y2) <= r);
-		return y1 > y2;
-	});
-
-	for (int i = 0, n = (int)P.size(); i < n; ++i)
-	{
-		P2f p = puzzle.get(P[i]);
-		const double y = (p-c)*v0;
-		const double x = (p-c)*P2f(-v0.y, v0.x);
-
-		// find the closest other piece behind it
-		bool done = false;
-		for (int j = i+1; j < n; ++j)
-		{
-			P2f q = puzzle.get(P[j]);
-			const double yj = (q-c)*v0;
-			const double xj = (q-c)*P2f(-v0.y, v0.x);
-			assert(yj <= y);
-			if (yj < y-1.0) break;
-			if (fabs(xj - x) > 1.0) continue;
-
-			p += v + v0 * ((1.0f+yj-y)*0.2);
-			p += P2f(-v0.y, v0.x)*(0.04*(x-xj));
-	
-			//q -= P2f(-v0.y, v0.x)*(0.04*(x-xj));
-			//puzzle.move(P[j], q.x, q.y, false);
-
-			done = true;
-			break;
-		}
-		if (!done)
-		{
-			double f = -y/r / sqrt(1.00000000001 - std::min(1.0, x*x/(r*r))); // 1..-1
-			f += 1.0; f /= 2.0; // 1..0
-			p.x += f*v.x;
-			p.y += f*v.y;
-		}
-		puzzle.move(P[i], p.x, p.y, false);
-	}
 }

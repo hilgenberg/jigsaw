@@ -11,7 +11,7 @@ enum EdgeType
 {
 	None = 0, // plain rectangles
 	Regular,  // regular jigsaw pieces
-	Linear,   // _/\_ triangular cutout
+	Triangle, // _/\_ triangular cutout
 	Groove,   // --_--
 	Circle,   // semicircle
 };
@@ -28,6 +28,12 @@ namespace Preferences
 
 	int  fps();
 	void fps(int value);
+
+	float solution_alpha();
+	void solution_alpha(float value);
+
+	bool absolute_mode();
+	void absolute_mode(bool value);
 
 	bool vsync();
 	void vsync(bool value);

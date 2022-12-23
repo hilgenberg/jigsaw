@@ -176,37 +176,48 @@ void Puzzle::pick_up(Piece i)
 {
 	assert(i >= 0 && i < N);
 
+	bool is_final = (Preferences::absolute_mode() || is_big_border_group(i)) && delta(i).absq() < 1e-12;
+
 	if (g[i] < 0)
 	{
+		if (is_final && z[0] == i) return;
 		auto it = std::remove(z.begin(), z.end(), i);
 		assert(it == z.begin()+N-1);
-		z[N-1] = i;
-	}
-	else if (!is_big_border_group(i))
-	{
-		auto &G = groups[g[i]];
-		auto it = std::remove_if(z.begin(), z.end(), [&G](Piece p){ return G.count(p) > 0; });
-		assert(it == z.begin()+N-G.size());
-		int i = N-G.size();
-		for (Piece j : G) z[i++] = j;
+		if (!is_final)
+		{
+			z[N-1] = i;
+		}
+		else
+		{
+			for (int j = N-1; j > 0; --j) z[j] = z[j-1];
+			z[0] = i;
+		}
 	}
 	else
 	{
 		auto &G = groups[g[i]];
-		bool all_good = true; // is the entire group at bottom already?
-		for (int i = 0; i < (int)G.size(); ++i)
+		if (is_final)
 		{
-			if (G.count(z[i])) continue;
-			all_good = false;
-			break;
+			bool all_good = true; // is the entire group at bottom already?
+			for (int i = 0; i < (int)G.size(); ++i)
+			{
+				if (G.count(z[i])) continue;
+				all_good = false;
+				break;
+			}
+			if (all_good) return;
 		}
-		if (all_good) return;
 
 		auto it = std::remove_if(z.begin(), z.end(), [&G](Piece p){ return G.count(p) > 0; });
 		assert(it == z.begin()+N-G.size());
 		int i = N-G.size();
-		while (--i >= 0) z[i+G.size()] = z[i];
-		i = 0; for (Piece j : G) z[i++] = j;
+		if (is_final)
+		{
+			while (--i >= 0) z[i+G.size()] = z[i];
+			i = 0;
+		}
+		for (Piece j : G) z[i++] = j;
+
 	}
 
 	sanity_checks();
@@ -272,6 +283,10 @@ bool Puzzle::connect(Piece i, float delta_max)
 	assert(i >= 0 && i < N);
 	assert(!animations.count(i));
 
+	bool snap = (Preferences::absolute_mode() && delta(i).absq() > 1e-12 && align(i, delta_max));
+
+	if (snap) move(i, P2f(i%W - 0.5f*W,i/W - 0.5f*H), false);
+
 	// check for new connections
 	std::set<Piece> adding;
 	if (g[i] < 0)
@@ -291,14 +306,13 @@ bool Puzzle::connect(Piece i, float delta_max)
 		if (y < H-1 && g[i] != g[j+W] && align(j, j+W, delta_max)) adding.insert(j+W);
 	}
 
-	if (adding.empty()) return false;
+	if (adding.empty()) return snap;
 
-	while (!adding.empty())
-	{
+	do {
 		adding.insert(i);
 
 		// find the group with the lowest index
-		int g0 = -1; for (Piece a : adding) if (g[a] >= 0 && g[a] < g0) g0 = g[a];
+		int g0 = -1; for (Piece a : adding) if (g[a] >= 0 && (g0 < 0 || g[a] < g0)) g0 = g[a];
 		if (g0 < 0)
 		{
 			// create new group (or recycle an empty one)
@@ -317,9 +331,12 @@ bool Puzzle::connect(Piece i, float delta_max)
 		assert(g0 >= 0);
 		auto &G = groups[g0];
 
-		// find the biggest group (which will get to keep its position)
-		int n0 = (g[i] < 0 ? 1 : groups[g[i]].size());
-		for (Piece a : adding) if (g[a] >= 0 && groups[g[a]].size() > n0) { i = a; n0 = groups[g[a]].size(); }
+		if (!snap)
+		{
+			// find the biggest group (which will get to keep its position)
+			int n0 = (g[i] < 0 ? 1 : groups[g[i]].size());
+			for (Piece a : adding) if (g[a] >= 0 && groups[g[a]].size() > n0) { i = a; n0 = groups[g[a]].size(); }
+		}
 
 		// merge the full groups
 		for (Piece a : adding)
@@ -348,7 +365,8 @@ bool Puzzle::connect(Piece i, float delta_max)
 			if (y > 0   && g0 != g[j-W] && align(j, j-W, delta_max)) adding.insert(j-W);
 			if (y < H-1 && g0 != g[j+W] && align(j, j+W, delta_max)) adding.insert(j+W);
 		}
-	}
+	} while (!adding.empty());
+
 	while (groups.back().empty()) groups.pop_back();
 
 	pick_up(i);
@@ -378,3 +396,95 @@ bool Puzzle::is_big_border_group(Piece i) const
 	return n > W+H-1;
 }
 
+// helper functions from the shader code:
+static inline int tx(int b) { return (b & 1) - ((b>>1) & 1); }
+static inline float dq(const P2f &v, float r) { return v.absq() - r*r; }
+static inline float min(float a, float b) { return std::min(a,b); }
+static inline float max(float a, float b) { return std::max(a,b); }
+Puzzle::Piece Puzzle::hit_test(float x, float y, P2f &rel) const // any piece at (x,y)?
+{
+	float d1, d0;
+	const auto edge = Preferences::edge();
+	overhang(edge, d1, d0);
+	float d = std::max(d1, d0);
+
+	for (int j = N-1; j >= 0; --j)
+	{
+		const int i = z[j];
+		const float px = pos[i].x, py = pos[i].y;
+		if (x < px-d || x > px+1.0f+d || y < py-d || y > py+1.0f+d) continue;
+		
+		const int b = (int)borders[i];
+		const int bl = tx(b);
+		const int br = tx(b>>2);
+		const int bt = tx(b>>4);
+		const int bb = tx(b>>6);
+
+		float x0 = 0.0f, x1 = 1.0f, y0 = 0.0f, y1 = 1.0f;
+		if (bl == 1) x0 -= d1; else if (bl == -1) x0 -= d0;
+		if (br == 1) x1 += d1; else if (br == -1) x1 += d0;
+		if (bt == 1) y0 -= d1; else if (bt == -1) y0 -= d0;
+		if (bb == 1) y1 += d1; else if (bb == -1) y1 += d0;
+		if (x-px < x0 || x-px > x1 || y-py < y0 || y-py > y1) continue;
+
+		bool hit = true;
+		P2f orig(x-px, y-py);
+		#define discard hit=false
+		#define vec2 P2f
+		switch (edge)
+		{
+			case None: break;
+			case Regular:
+			{
+				const float R = 1.5, r = 0.15, d0 = 0.0, h = 0.08578643762690485;
+				if (bl*max(dq(vec2(    bl*(h-R), 0.5)-orig, R), -dq(vec2(   -bl*d0, 0.5)-orig, r)) < -1e-8) discard;
+				if (br*max(dq(vec2(1.0+br*(R-h), 0.5)-orig, R), -dq(vec2(1.0+br*d0, 0.5)-orig, r)) < -1e-8) discard;
+				if (bt*max(dq(vec2(0.5,     bt*(h-R))-orig, R), -dq(vec2(0.5,    -bt*d0)-orig, r)) < -1e-8) discard;
+				if (bb*max(dq(vec2(0.5, 1.0+bb*(R-h))-orig, R), -dq(vec2(0.5, 1.0+bb*d0)-orig, r)) < -1e-8) discard;
+				break;
+			}
+			case Triangle:
+			{
+				const float h1 = 0.15f, h2 = 0.05f, w = 0.5f/3.0f;
+				const float x = fabs(orig.x-0.5), y = fabs(orig.y-0.5f);
+				const float a = (h1+h2)/w, b = h1*h2/(h1-h2);
+				const float xx = min(a*x - h1, b - 2.0f*b*x);
+				const float yy = min(a*y - h1, b - 2.0f*b*y);
+				if (     orig.y < bt * xx) discard;
+				if (1.0f-orig.y < bb * xx) discard;
+				if (     orig.x < bl * yy) discard;
+				if (1.0f-orig.x < br * yy) discard;
+				break;
+			}
+			case Groove:
+			{
+				float h = 0.034, r = 0.2;
+				if (bt*fabs(orig.x-0.5) > bt*r && orig.y <     h) discard;
+				if (bb*fabs(orig.x-0.5) > bb*r && orig.y > 1.0-h) discard;
+				if (bl*fabs(orig.y-0.5) > bl*r && orig.x <     h) discard;
+				if (br*fabs(orig.y-0.5) > br*r && orig.x > 1.0-h) discard;
+				break;
+			}
+			case Circle:
+			{
+				const float r = 0.2f;
+				const float x = fabs(orig.x-0.5f), y = fabs(orig.y-0.5f);
+				if (bt*orig.y < 0.0 && bt*hypotf(x,     orig.y) > bt*r) discard;
+				if (bb*orig.y > bb  && bb*hypotf(x, 1.0-orig.y) > bb*r) discard;
+				if (bl*orig.x < 0.0 && bl*hypotf(y,     orig.x) > bl*r) discard;
+				if (br*orig.x > br  && br*hypotf(y, 1.0-orig.x) > br*r) discard;
+				break;
+			}
+			default: assert(false);
+		}
+		#undef discard
+		#undef vec2
+
+		if (hit)
+		{
+			rel.set(x-px, y-py);
+			return i;
+		}
+	}
+	return -1;
+}

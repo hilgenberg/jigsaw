@@ -6,6 +6,7 @@
 #include <functional>
 #include "Utility/Vector.h"
 #include "Persistence/Serializer.h"
+#include "Utility/Preferences.h"
 
 extern double rand01(); //  0..1
 extern double rand11(); // -1..1
@@ -43,6 +44,7 @@ struct Puzzle : public Serializable
 	struct Anim { P2f dest, v; Anim() : dest(0.0f, 0.0f), v(0.0f, 0.0f) {} };
 	std::map<Piece, Anim> animations;
 	void animate(double dt);
+	void kill_animations() { animations.clear(); }
 
 	P2f  get(Piece i) const { assert(i >= 0 && i < N); return P2f(pos[i].x*sx, pos[i].y*sy); }
 	void move(Piece i, const P2f &p, bool animate);
@@ -63,21 +65,51 @@ struct Puzzle : public Serializable
 		//return (pos[i]-pos[j] - P2f(i%W - j%W, i/W - j/W)).absq() < epsq;
 	}
 
-	Piece hit_test(const P2f &p, P2f &rel) const { return hit_test(p.x, p.y, rel); }
-	Piece hit_test(float x, float y, P2f &rel) const // any piece at (x,y)?
+	inline P2f delta(Piece i) const // distance from final place
 	{
-		for (int j = N-1; j >= 0; --j)
-		{
-			int i = z[j];
-			float px = pos[i].x, py = pos[i].y;
-			if (x > px && x < px+1.0 && y > py && y < py+1.0)
-			{
-				rel.set(x-px, y-py);
-				return i;
-			}
-		}
-		return -1;
+		assert(i >= 0 && i < N);
+		return pos[i] - P2f(i%W-0.5f*W, i/W-0.5f*H);
 	}
+
+	inline bool align(Piece i, float delta_max) const // should it snap into place?
+	{
+		assert(i >= 0 && i < N);
+		assert(delta_max > 0.0f);
+		P2f d = delta(i);
+		return fabs(d.x) < delta_max*sx &&
+		       fabs(d.y) < delta_max*sy;
+	}
+
+	inline bool should_arrange(Piece i) const
+	{
+		if (g[i] >= 0) return false;
+		if (Preferences::absolute_mode())
+		{
+			if (delta(i).absq() < 1e-12f) return false;
+		}
+		else
+		{
+			//if (is_big_border_group(i)) return false;
+		}
+		return true;
+	}
+
+	static void overhang(EdgeType et, float &d1, float &d0)
+	{
+		// returns how much bigger a piece can get when the knob sticks
+		// out (d1) or when the knob goes in (d0)
+		switch (et)
+		{
+			case None:     d1 = d0 = 0.0f; break;
+			case Regular:  d1 = 0.15f; d0 = 0.08578643762690485f; break;
+			case Triangle: d1 = 0.15f; d0 = 0.05f; break;
+			case Groove:   d1 = d0 = 0.034f; break;
+			case Circle:   d1 = 0.2f; d0 = 0.0f; break;
+			default: assert(false);
+		}
+	}
+	Piece hit_test(const P2f &p, P2f &rel) const { return hit_test(p.x, p.y, rel); }
+	Piece hit_test(float x, float y, P2f &rel) const; // any piece at (x,y)?
 
 	bool is_edge_piece(Piece i) const
 	{

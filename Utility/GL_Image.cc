@@ -10,14 +10,12 @@
 // GL_Image
 //----------------------------------------------------------------------------------------------------------------------
 
-#ifdef __linux__
 #define STB_IMAGE_IMPLEMENTATION
 #include "../stb/stb_image.h"
 
 bool GL_Image::load(const std::string &path)
 {
 	//stbi_set_flip_vertically_on_load(true);
-
 	int x,y,n;
 	unsigned char *d1 = stbi_load(path.c_str(), &x, &y, &n, 4);
 	if (!d1)
@@ -37,7 +35,27 @@ bool GL_Image::load(const std::string &path)
 	stbi_image_free(d1);
 	return true;
 }
-#endif
+bool GL_Image::load(const std::vector<unsigned char> &data)
+{
+	int x,y,n;
+	unsigned char *d1 = stbi_load_from_memory(data.data(), (int)data.size(), &x, &y, &n, 4);
+	if (!d1)
+	{
+		fprintf(stderr, "Error parsing image data: %s\n", stbi_failure_reason());
+		return false;
+	}
+	if (x <= 0 || y <= 0 || n <= 0)
+	{
+		stbi_image_free(d1);
+		return false;
+	}
+
+	unsigned char *d2 = redim(x, y);
+	if (!d2) return false;
+	memcpy(d2, d1, x*y*4);
+	stbi_image_free(d1);
+	return true;
+}
 
 void GL_Image::save(Serializer &s) const
 {
@@ -82,10 +100,7 @@ void GL_Image::load(Deserializer &s)
 		for (size_t j = 0; j < n; ++j, d += 4) *d = *cd++ + d[1];
 	}
 	
-	_opacity = -1;
 	check_data();
-
-	++_state;
 }
 
 const std::vector<unsigned char> &GL_Image::data() const
@@ -126,34 +141,6 @@ void GL_Image::mix(float alpha, std::vector<unsigned char> &dst) const
 		for (size_t i = 3; i < d.size(); i += 4)
 		{
 			dst[i] = (unsigned char)(a1 * dst[i] / 255);
-		}
-	}
-}
-
-void GL_Image::prettify(bool circle)
-{
-	check_data();
-	unsigned char *d = _data.data();
-	
-	size_t n = (size_t)_w * _h, l = data().size(), no = 0, nt = 0;
-	for (size_t i = 3; i < l; i += 4){ if (d[i] > 245) ++no; if (d[i] < 10) ++nt; }
-	
-	if (no == 0 && nt == n) // fully transparent -> make fully opaque
-	{
-		for (size_t i = 3; i < l; i += 4) d[i] = 255;
-		no = n; nt = 0;
-	}
-	if (circle && nt == 0 && no == n) // fully opaque
-	{
-		d += 3;
-		int r = std::min(_w, _h);
-		int x0 = (int)_w - r/2, y0 = (int)_h - r/2;
-		for (int i = 0; i < (int)_h; ++i)
-		for (int j = 0; j < (int)_w; ++j)
-		{
-			double rr = hypot((j - x0), (i - y0)) - r*0.4;
-			if (rr >= 0.0) *d = std::min((unsigned char)std::max(0.0, 255.0*(1.0 - rr/0.1)), (unsigned char)255);
-			d += 4;
 		}
 	}
 }
