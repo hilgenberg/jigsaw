@@ -26,7 +26,6 @@ void main()
 	int bb = tx(b>>6);
 
 	vec4 c = gl_in[0].gl_Position;
-	const vec2 q [] = vec2 [] (vec2(0.0, 0.0), vec2(1.0, 0.0), vec2(0.0, 1.0), vec2(1.0, 1.0));
 	vec2 t = tex_geo[0];
 
 	float x0 = 0.0f, x1 = 1.0f, y0 = 0.0f, y1 = 1.0f;

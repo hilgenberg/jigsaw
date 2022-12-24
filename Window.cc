@@ -317,6 +317,7 @@ void Window::reshape(int w_, int h_)
 {
 	if (w == w_ && h == h_) return;
 	w = w_; h = h_;
+	buttons.reshape(w, h);
 	if (w <= 0 || h <= 0) return;
 	glViewport(0, 0, w, h);
 	doc.camera.viewport(w, h);

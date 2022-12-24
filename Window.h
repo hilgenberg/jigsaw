@@ -23,8 +23,10 @@ public:
 	void reshape(int w, int h);
 	bool handle_event(const SDL_Event &event);
 	bool handle_key(SDL_Keysym key, bool release);
-
+	P2<int> size() const { return P2<int>(w,h); }
+	
 private:
+	friend class Buttons;
 	Document   &doc;
 	Buttons     buttons;
 	SDL_Window *window;

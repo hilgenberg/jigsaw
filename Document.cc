@@ -224,6 +224,9 @@ void Document::draw()
 	glDrawArrays(GL_POINTS, 0, N);
 	GL_CHECK;
 
+	glBindVertexArray(0);
+	glUseProgram(0);
+
 	++current_buf; current_buf %= 2;
 }
 

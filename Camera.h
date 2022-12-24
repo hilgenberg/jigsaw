@@ -33,18 +33,17 @@ public:
 	void view_box(float x0, float x1, float y0, float y1, float factor = 1.0f)
 	{
 		center.set((x0+x1)*0.5f, (y0+y1)*0.5f);
-
-		#if 0
+	#if 0
 		// this makes it fit, no matter how the window gets resized:
 		R = std::max(x1-x0, y1-y0)*0.5f*factor;
 		if (w < h) range.set(R, R * hr);
 		else       range.set(R / hr, R);
-		#else
+	#else
 		// this fits it with the current w,h:
 		R = std::max((x1-x0)*h, (y1-y0)*w) * 0.5f*factor;
 		range.set(R/h, R/w);
 		R /= std::max(w, h);
-		#endif
+	#endif
 	}
 	void set_R(double R_)
 	{
