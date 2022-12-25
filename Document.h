@@ -24,8 +24,7 @@ struct Document : public Serializable
 	bool drop(int piece);
 	
 	void reset_view();
-	void arrange();
-	void arrange_edges();
+	void arrange(bool edge, bool spiral = false);
 	void hide(int piece, bool and_similar = false);
 	void shovel(int mx, int my, double dx, double dy);
 

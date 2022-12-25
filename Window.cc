@@ -14,6 +14,8 @@ extern volatile bool quit;
 
 static inline double absmax(double a, double b){ return fabs(a) > fabs(b) ? a : b; }
 
+static bool spiral = false;
+
 Window::Window(SDL_Window* window, Document &doc)
 : tnf(-1.0)
 , last_frame(-1.0)
@@ -282,15 +284,19 @@ bool Window::handle_key(SDL_Keysym keysym, bool release)
 			return true;
 		
 		case SDLK_SPACE:
-			if (ctrl) doc.arrange();
+			if (ctrl) doc.arrange(false, spiral);
 			else doc.reset_view();
 			redraw();
 			start_animations();
 			return true;
 		case SDLK_e:
-			doc.arrange_edges();
+			doc.arrange(true, spiral);
 			redraw();
 			start_animations();
+			return true;
+		case SDLK_s:
+			spiral = !spiral;
+			play_click();
 			return true;
 		#ifdef DEBUG
 		case SDLK_a:
