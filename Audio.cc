@@ -21,7 +21,7 @@ bool audio_init(int &argc, char **argv)
 	alListenerfv(AL_ORIENTATION, orientation); TEST_ERROR("listener orientation");
 	alGenSources((ALuint)1, &source); TEST_ERROR("source generation");
 	alSourcef(source, AL_PITCH, 1); TEST_ERROR("source pitch");
-	alSourcef(source, AL_GAIN, 1); TEST_ERROR("source gain");
+	alSourcef(source, AL_GAIN, 0.2f); TEST_ERROR("source gain");
 	alSource3f(source, AL_POSITION, 0, 0, 0); TEST_ERROR("source position");
 	alSource3f(source, AL_VELOCITY, 0, 0, 0); TEST_ERROR("source velocity");
 	alSourcei(source, AL_LOOPING, AL_FALSE); TEST_ERROR("source looping");
