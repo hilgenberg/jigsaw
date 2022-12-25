@@ -11,19 +11,13 @@ static GLuint program = 0;
 static GLuint VBO[2] = {0,0}, VAO[2] = {0,0}; // use double buffering for data to avoid stalls in glMap
 static GLuint texture = 0;
 static int    current_buf = 0;
-static constexpr int N_IMAGES = 3, MAX_BUTTONS = 3;
+static constexpr int MAX_BUTTONS = N_IMAGES;
 static P2f button_size(0.0f, 0.0f);
 static P2f foldout_direction(1.0f, 0.0f);
 
-enum {
-	ARRANGE = 0,
-	EDGE_ARRANGE,
-	SETTINGS
-};
-
 struct Button
 {
-	int index; // index into button texture
+	ButtonAction index; // index into button texture
 	P2f pos; // center position
 	float alpha() const { return 1.0f; }
 	bool hit(const Window &w, int mx, int my) const
@@ -42,9 +36,13 @@ Buttons::Buttons(Window &win) : w(win)
 	GL_Image im;
 	{
 		std::vector<GL_Image> tmp(N_IMAGES);
-		tmp[ARRANGE].load(ic_grid_data());
-		tmp[EDGE_ARRANGE].load(ic_edge2_data());
-		tmp[SETTINGS].load(ic_setup_data());
+		tmp[ARRANGE].load(ic_arrange_data());
+		tmp[EDGE_ARRANGE].load(ic_edge_data());
+		tmp[RESET_VIEW].load(ic_view_data());
+		tmp[HIDE].load(ic_hide_data());
+		tmp[SHOVEL].load(ic_shovel_data());
+		tmp[MAGNET].load(ic_magnet_data());
+		tmp[SETTINGS].load(ic_settings_data());
 		
 		int w = tmp[0].w(), h = tmp[0].h();
 		#ifndef NDEBUG
@@ -128,16 +126,29 @@ void Buttons::reshape(int W, int H)
 	if (W < H) h = w*W/H; else w = h*H/W;
 	button_size.set(w, h);
 
-	buttons.resize(3);
-	auto *b = &buttons[0];
+	buttons.resize(N_IMAGES);
+	auto *b = &buttons[-1];
 	float x = -1.0+w*0.5f, y = 1.0f-h*0.5f;
-	b->index = ARRANGE;
+
+	(++b)->index = RESET_VIEW;
+	b->pos.set(x, y); y -= h;
+
+	(++b)->index = ARRANGE;
 	b->pos.set(x, y); y -= h;
 
 	(++b)->index = EDGE_ARRANGE;
 	b->pos.set(x, y); y -= h;
 
 	(++b)->index = SETTINGS;
+	b->pos.set(x, y); y -= h;
+
+	(++b)->index = HIDE;
+	b->pos.set(x, y); y -= h;
+
+	(++b)->index = SHOVEL;
+	b->pos.set(x, y); y -= h;
+
+	(++b)->index = MAGNET;
 	b->pos.set(x, y); y -= h;
 }
 
@@ -192,13 +203,7 @@ bool Buttons::handle_event(const SDL_Event &e)
 			for (auto &b : buttons)
 			{
 				if (!b.hit(w, e.button.x, e.button.y)) continue;
-				switch (b.index)
-				{
-					case ARRANGE: w.doc.arrange(); break;
-					case EDGE_ARRANGE: w.doc.arrange_edges(); break;
-				}
-				w.start_animations();
-				w.redraw();
+				w.button_action(b.index);
 				return true;
 			}
 			return false;

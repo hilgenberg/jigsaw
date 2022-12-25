@@ -49,6 +49,12 @@ static bool save(Document &doc)
 	return true;
 }
 
+GUI *gui = NULL;
+void toggle_gui()
+{
+	if (gui) gui->toggle();
+}
+
 int main(int argc, char *argv[])
 {
 	Preferences::reset();
@@ -171,6 +177,7 @@ int main(int argc, char *argv[])
 		GL_CHECK;
 		Window w(window, doc);
 		GUI gui(window, gl_context, w);
+		::gui = &gui;
 
 		GL_CHECK;
 

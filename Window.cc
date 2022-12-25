@@ -11,6 +11,7 @@
 #include <GL/gl.h>
 #include <SDL.h>
 extern volatile bool quit;
+extern void toggle_gui();
 
 static inline double absmax(double a, double b){ return fabs(a) > fabs(b) ? a : b; }
 
@@ -317,6 +318,20 @@ bool Window::handle_key(SDL_Keysym keysym, bool release)
 			return true;
 	}
 	return false;
+}
+
+void Window::button_action(ButtonAction a)
+{
+	switch (a)
+	{
+		case ARRANGE: doc.arrange(false, spiral); break;
+		case EDGE_ARRANGE: doc.arrange(true, spiral); break;
+		case RESET_VIEW: doc.reset_view(); redraw(); return;
+		case SETTINGS: toggle_gui(); return;
+		default: return;
+	}
+	start_animations();
+	redraw();
 }
 
 void Window::reshape(int w_, int h_)

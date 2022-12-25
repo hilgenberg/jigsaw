@@ -10,6 +10,7 @@ public:
 	~GUI();
 
 	void show() { if (!visible) redraw(); visible = true; }
+	void toggle() { visible = !visible; redraw(); }
 	void redraw(int n_frames = 3){ need_redraw = std::max(n_frames, need_redraw); }
 	bool needs_redraw() const{ return visible && need_redraw > 0; }
 	

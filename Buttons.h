@@ -3,6 +3,18 @@
 #include <SDL_events.h>
 class Window;
 
+enum ButtonAction
+{
+	ARRANGE = 0,
+	EDGE_ARRANGE,
+	RESET_VIEW,
+	HIDE,
+	SHOVEL,
+	MAGNET,
+	SETTINGS,
+	N_IMAGES
+};
+
 class Buttons
 {
 public:

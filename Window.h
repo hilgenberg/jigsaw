@@ -27,6 +27,8 @@ public:
 	
 private:
 	friend class Buttons;
+	void button_action(ButtonAction a);
+
 	Document   &doc;
 	Buttons     buttons;
 	SDL_Window *window;
