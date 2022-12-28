@@ -14,6 +14,10 @@ static int  pieces_    = 256;
 static int  alpha_     = 0;
 static bool absmode_   = false;
 static EdgeType edge_  = Regular;
+static int  buttons_   = 0;
+static bool spiral_    = false;
+static int  button_edge_ = LEFT;
+static int  button_align_ = TOP_OR_LEFT;
 
 namespace Preferences
 {
@@ -46,6 +50,10 @@ namespace Preferences
 		edge_      = Regular;
 		alpha_     = 0;
 		absmode_   = false;
+		buttons_   = 0;
+		spiral_    = false;
+		button_edge_ = LEFT;
+		button_align_ = TOP_OR_LEFT;
 		image_.clear();
 		load(); have_changes = false;
 		return true;
@@ -62,13 +70,27 @@ namespace Preferences
 
 	float solution_alpha() { return alpha_ / 1023.0f; }
 	void solution_alpha(float value) {
-		int v = (int)(value*1023.0f);
+		int v = (int)std::round(value*1023.0f);
 		if (alpha_==v) return;
 		alpha_ = v; have_changes = true;
 	}
 
 	bool absolute_mode() { return absmode_; }
 	void absolute_mode(bool value) { SET(absmode_); }
+
+	bool spiral() { return spiral_; }
+	void spiral(bool value) { SET(spiral_); }
+
+	float button_scale() { return buttons_ / 1023.0f; }
+	void button_scale(float value) {
+		int v = (int)std::round(value*1023.0f);
+		if (buttons_==v) return;
+		buttons_ = v; have_changes = true;
+	}
+	ScreenEdge button_edge() { return (ScreenEdge)button_edge_; }
+	void  button_edge(ScreenEdge value) { SET(button_edge_); }
+	ScreenAlign button_align() { return (ScreenAlign)button_align_; }
+	void  button_align(ScreenAlign value) { SET(button_align_); }
 
 	int  pieces() { return pieces_; }
 	void pieces(int value) { SET(pieces_); }
@@ -174,7 +196,11 @@ static bool load()
 		else if (key == "image"    ) image_ = value;
 		else if (key == "alpha"    ) parse(v, alpha_);
 		else if (key == "abs"      ) parse(v, absmode_);
+		else if (key == "spiral"   ) parse(v, spiral_);
 		else if (key == "edge"     ) parse(v, (int&)edge_);
+		else if (key == "button_edge") parse(v, (int&)button_edge_);
+		else if (key == "button_align") parse(v, (int&)button_align_);
+		else if (key == "buttons"  ) parse(v, buttons_);
 		else
 		{
 			fprintf(stderr, "Ignoring invalid key in preference file: %s\n", key.c_str());
@@ -202,7 +228,11 @@ static bool save()
 	fprintf(file, "image=%s\n", image_.c_str());
 	fprintf(file, "alpha=%d\n", alpha_);
 	fprintf(file, "abs=%s\n", absmode_ ? "on" : "off");
+	fprintf(file, "spiral=%s\n", spiral_ ? "on" : "off");
 	fprintf(file, "edge=%d\n", (int)edge_);
+	fprintf(file, "buttons=%d\n", buttons_);
+	fprintf(file, "button_edge=%d\n", (int)button_edge_);
+	fprintf(file, "button_align=%d\n", (int)button_align_);
 	fclose (file);
 	have_changes = false;
 	return true;

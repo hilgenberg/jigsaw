@@ -1,7 +1,7 @@
 #include "Document.h"
 #include "Utility/Histogram.h"
 
-static void hide(Puzzle &puzzle, int piece)
+static void hide(Puzzle &puzzle, Puzzle::Piece piece)
 {
 	double R = 1.25*hypot(puzzle.W, puzzle.H);
 	double x = rand01(); R += 5.0*x*x;
@@ -17,7 +17,7 @@ static void hide(Puzzle &puzzle, int piece)
 	puzzle.move(piece, p.x, p.y, true);
 }
 
-void Document::hide(int piece, bool and_similar)
+void Document::hide(Puzzle::Piece piece, bool and_similar)
 {
 	if (piece < 0 || piece >= puzzle.N) return;
 	if (and_similar)
@@ -41,11 +41,11 @@ int Document::hit_test(int mx, int my, bool pick_up, P2f &rel)
 	auto p = camera.convert(mx, my);
 	p.x /= puzzle.sx;
 	p.y /= puzzle.sy;
-	int i = puzzle.hit_test(p, rel);
+	Puzzle::Piece i = puzzle.hit_test(p, rel);
 	if (pick_up && i >= 0) puzzle.pick_up(i);
 	return i;
 }
-void Document::drag(int piece, const P2f &rel, int mx, int my, P2d &v, double mdx, double mdy)
+void Document::drag(Puzzle::Piece piece, std::set<Puzzle::Piece> &magnet, const P2f &rel, int mx, int my, P2d &v, double mdx, double mdy)
 {
 	int w = camera.screen_w(), h = camera.screen_h();
 	int pn = std::min(w, h) / 10; // size of border that causes scrolling
@@ -63,13 +63,24 @@ void Document::drag(int piece, const P2f &rel, int mx, int my, P2d &v, double md
 	p.x /= puzzle.sx;
 	p.y /= puzzle.sy;
 	p -= rel;
-	puzzle.move(piece, p, false);
+	assert(magnet.empty() || magnet.count(piece));
+	if (magnet.empty())
+	{
+		puzzle.move(piece, p, false);
+		return;
+	}
+	else
+	{
+		assert(magnet.count(piece));
+		P2f delta = p - puzzle.pos[piece];
+		puzzle.magnetize(magnet, delta);
+	}
 }
-bool Document::drop(int piece)
+bool Document::drop(Puzzle::Piece piece, std::set<Puzzle::Piece> &magnet)
 {
 	if (piece < 0 || piece >= puzzle.N) return false;
-	if (!puzzle.connect(piece, std::max(5.0*camera.pixel_size(), 0.3))) return false;
-	return true;
+	auto delta = std::max(5.0*camera.pixel_size(), 0.3);
+	return magnet.empty() ? puzzle.connect(piece, delta) : puzzle.connect(magnet, delta);
 }
 
 void Document::shovel(int mx, int my, double dx, double dy)

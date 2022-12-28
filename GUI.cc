@@ -83,13 +83,49 @@ void GUI::update()
 	ImGui::Combo("Edges", &i, edges, 5);
 	if (i != i0) Preferences::edge((EdgeType)i);
 
-	float f0, f = Preferences::solution_alpha(); f0 = f;
+	float f0 = Preferences::solution_alpha(), f = f0;
 	ImGui::SliderFloat("##Solution Alpha", &f, 0.0f, 1.0f, "Solution Alpha: %.3f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_NoInput);
 	if (f != f0) Preferences::solution_alpha(f);
 
 	b0 = Preferences::absolute_mode(); b = b0;
 	ImGui::Checkbox("Absolute Mode", &b);
 	if (b != b0) Preferences::absolute_mode(b);
+
+	b0 = Preferences::spiral(); b = b0;
+	ImGui::Checkbox("Spiral Arrange", &b);
+	if (b != b0) Preferences::spiral(b);
+
+	ImGui::Spacing();
+	ImGui::Spacing();
+	ImGui::Spacing();
+	ImGui::Spacing();
+	ImGui::Spacing();
+	
+	f0 = Preferences::button_scale(); f = f0;
+	ImGui::SliderFloat("##Button Scale", &f, -1.0f, 1.0f, "Button Scale: %.3f", ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_NoInput);
+	if (f != f0)
+	{
+		Preferences::button_scale(f);
+		w.buttons.reshape();
+	}
+	
+	static const char *button_edges[] = {"Left", "Right", "Top", "Bottom"};
+	i = i0 = Preferences::button_edge();
+	ImGui::Combo("Button Placement", &i, button_edges, 4);
+	if (i != i0) { Preferences::button_edge((ScreenEdge)i); w.buttons.reshape(); }
+	bool button_v = (i == LEFT || i == RIGHT);
+	
+	static const char *button_align_h[] = {"Left", "Center", "Right"};
+	static const char *button_align_v[] = {"Top", "Center", "Bottom"};
+	i = i0 = Preferences::button_align();
+	ImGui::Combo("Button Alignment", &i, button_v ? button_align_v : button_align_h, 3);
+	if (i != i0) { Preferences::button_align((ScreenAlign)i); w.buttons.reshape(); }
+
+	ImGui::Spacing();
+	ImGui::Spacing();
+	ImGui::Spacing();
+	ImGui::Spacing();
+	ImGui::Spacing();
 
 	ImGui::Text("Animation FPS limit (-1 for none)");
 	i0 = Preferences::fps(); i = i0;

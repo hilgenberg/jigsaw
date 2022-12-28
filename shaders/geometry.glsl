@@ -1,5 +1,11 @@
 #version 430 core
 
+layout(location = 0) uniform mat4 view;
+layout(location = 1) uniform sampler2D image;
+layout(location = 2) uniform ivec2 count;
+layout(location = 3) uniform vec2 size; // size of piece, p.x or p.y will be 1.0, the other one greater
+layout(location = 4) uniform vec2 overhang; // how far do the pieces stick out from the border? (out_border,in_border)
+
 layout(points) in;
 in uint borders_geo[];
 in vec2 tex_geo[];
@@ -8,12 +14,6 @@ layout(triangle_strip, max_vertices = 4) out;
 out vec2 tex_coord;
 out flat uint border;
 out vec2 orig;
-
-layout(location = 0) uniform mat4 view;
-layout(location = 1) uniform sampler2D image;
-layout(location = 2) uniform ivec2 count;
-layout(location = 3) uniform vec2 size; // size of piece, p.x or p.y will be 1.0, the other one greater
-layout(location = 4) uniform vec2 overhang; // how far do the pieces stick out from the border? (out_border,in_border)
 
 int tx(uint b) { return int(b & uint(1)) - int((b>>1) & uint(1)); }
 

@@ -15,8 +15,6 @@ extern void toggle_gui();
 
 static inline double absmax(double a, double b){ return fabs(a) > fabs(b) ? a : b; }
 
-static bool spiral = false;
-
 Window::Window(SDL_Window* window, Document &doc)
 : tnf(-1.0)
 , last_frame(-1.0)
@@ -100,7 +98,7 @@ void Window::animate()
 	if (dragging >= 0)
 	{
 		int mx = -1, my = -1; SDL_GetMouseState(&mx, &my);
-		doc.drag(dragging, drag_rel, mx, my, drag_v);
+		doc.drag(dragging, magnetized, drag_rel, mx, my, drag_v);
 	}
 
 	doc.puzzle.animate(dt);
@@ -118,23 +116,19 @@ bool Window::handle_event(const SDL_Event &e)
 
 	switch (e.type)
 	{
-		case SDL_WINDOWEVENT:
-			switch (e.window.event)
-			{
-				case SDL_WINDOWEVENT_CLOSE:
-					if (e.window.windowID == SDL_GetWindowID(window))
-					{
-						quit = true;
-						return true;
-					}
-					break;
-				case SDL_WINDOWEVENT_SHOWN:
-				case SDL_WINDOWEVENT_EXPOSED:
-				case SDL_WINDOWEVENT_RESTORED:
-					redraw();
-					return true;
-			}
-			return false;
+		case SDL_WINDOWEVENT: switch (e.window.event)
+		{
+			case SDL_WINDOWEVENT_CLOSE:
+				if (e.window.windowID != SDL_GetWindowID(window)) break;
+				quit = true;
+				return true;
+			case SDL_WINDOWEVENT_SHOWN:
+			case SDL_WINDOWEVENT_EXPOSED:
+			case SDL_WINDOWEVENT_RESTORED:
+				redraw();
+				return true;
+		}
+		return false;
 
 		case SDL_KEYDOWN:
 		case SDL_KEYUP:
@@ -148,27 +142,50 @@ bool Window::handle_event(const SDL_Event &e)
 			bool ctrl    = (m & (KMOD_LCTRL|KMOD_RCTRL));
 			bool alt     = (m & (KMOD_LALT|KMOD_RALT));
 
-			if (alt && !shift && !ctrl)
+			Tool t = tool;
+			if (t == Tool::NONE)
 			{
-				dragging = -1;
-				return true;
+				if (alt && !shift && !ctrl) t = Tool::SHOVEL;
+				else if (ctrl) t = Tool::HIDE;
 			}
-
-			dragging = doc.hit_test(e.button.x, e.button.y, true, drag_rel);
-			if (dragging >= 0 && ctrl)
+			switch (t)
 			{
-				doc.hide(dragging, alt||shift);
-				start_animations();
-				dragging = -2;
+				case Tool::SHOVEL:
+					dragging = -1;
+					break;
+				case Tool::HIDE:
+				{
+					int d = doc.hit_test(e.button.x, e.button.y, false, drag_rel);
+					if (d < 0) break;
+					doc.hide(d, alt||shift);
+					start_animations();
+					dragging = -2;
+					break;
+				}
+				case Tool::MAGNET:
+					dragging = doc.hit_test(e.button.x, e.button.y, true, drag_rel);
+					if (dragging < 0) break;
+					magnetized.insert(dragging);
+					if (doc.puzzle.g[dragging] >= 0)
+					{
+						auto &G = doc.puzzle.groups[doc.puzzle.g[dragging]];
+						magnetized.insert(G.begin(), G.end());
+					}
+					redraw();
+					break;
+				case Tool::NONE:
+					dragging = doc.hit_test(e.button.x, e.button.y, true, drag_rel);
+					if (dragging < 0) break;
+					redraw();
+					break;
 			}
-			redraw();
 			return true;
 		}
 		case SDL_MOUSEBUTTONUP:
-			if (e.button.button != SDL_BUTTON_LEFT) return true;
+			if (va || e.button.button != SDL_BUTTON_LEFT) return true;
 			if (dragging >= 0)
 			{
-				bool c = doc.drop(dragging);
+				bool c = doc.drop(dragging, magnetized);
 				if (c)
 				{
 					play_click();
@@ -180,6 +197,7 @@ bool Window::handle_event(const SDL_Event &e)
 				}
 			}
 			dragging = -1; drag_v.clear();
+			magnetized.clear();
 			redraw();
 			return true;
 		case SDL_MOUSEMOTION:
@@ -194,7 +212,7 @@ bool Window::handle_event(const SDL_Event &e)
 			double dx = e.motion.xrel, dy = e.motion.yrel, dz = 0.0;
 			if (dragging >= 0)
 			{
-				doc.drag(dragging, drag_rel, e.motion.x, e.motion.y, drag_v, dx, dy);
+				doc.drag(dragging, magnetized, drag_rel, e.motion.x, e.motion.y, drag_v, dx, dy);
 				if (drag_v.absq() > 1e-12) start_animations();
 				redraw();
 				return true;
@@ -207,7 +225,7 @@ bool Window::handle_event(const SDL_Event &e)
 
 			drag_v.clear();
 
-			if (alt && !ctrl && !shift)
+			if (tool == Tool::SHOVEL || (alt && !ctrl && !shift))
 			{
 				doc.shovel(e.motion.x, e.motion.y, dx, dy);
 				redraw();
@@ -246,7 +264,7 @@ bool Window::handle_event(const SDL_Event &e)
 				redraw();
 
 				if (dragging >= 0)
-					doc.drag(dragging, drag_rel, mx, my, drag_v);
+					doc.drag(dragging, magnetized, drag_rel, mx, my, drag_v);
 			}
 			else
 			{
@@ -283,21 +301,17 @@ bool Window::handle_key(SDL_Keysym keysym, bool release)
 			if (!ikeys.count(key)) ikeys[key] = 0.0;
 			start_animations();
 			return true;
-		
+
 		case SDLK_SPACE:
-			if (ctrl) doc.arrange(false, spiral);
+			if (ctrl) doc.arrange(false);
 			else doc.reset_view();
 			redraw();
 			start_animations();
 			return true;
 		case SDLK_e:
-			doc.arrange(true, spiral);
+			doc.arrange(true);
 			redraw();
 			start_animations();
-			return true;
-		case SDLK_s:
-			spiral = !spiral;
-			play_click();
 			return true;
 		#ifdef DEBUG
 		case SDLK_a:
@@ -324,13 +338,15 @@ void Window::button_action(ButtonAction a)
 {
 	switch (a)
 	{
-		case ARRANGE: doc.arrange(false, spiral); break;
-		case EDGE_ARRANGE: doc.arrange(true, spiral); break;
-		case RESET_VIEW: doc.reset_view(); redraw(); return;
-		case SETTINGS: toggle_gui(); return;
+		case ARRANGE:      doc.arrange(false); start_animations(); break;
+		case EDGE_ARRANGE: doc.arrange(true);  start_animations(); break;
+		case RESET_VIEW:   doc.reset_view(); break;
+		case SETTINGS:     toggle_gui(); break;
+		case HIDE:   tool = (tool==Tool::HIDE   ? Tool::NONE : Tool::HIDE);   break;
+		case SHOVEL: tool = (tool==Tool::SHOVEL ? Tool::NONE : Tool::SHOVEL); break;
+		case MAGNET: tool = (tool==Tool::MAGNET ? Tool::NONE : Tool::MAGNET); break;
 		default: return;
 	}
-	start_animations();
 	redraw();
 }
 
@@ -338,7 +354,7 @@ void Window::reshape(int w_, int h_)
 {
 	if (w == w_ && h == h_) return;
 	w = w_; h = h_;
-	buttons.reshape(w, h);
+	buttons.reshape();
 	if (w <= 0 || h <= 0) return;
 	glViewport(0, 0, w, h);
 	doc.camera.viewport(w, h);

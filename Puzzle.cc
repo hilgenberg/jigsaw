@@ -488,3 +488,53 @@ Puzzle::Piece Puzzle::hit_test(float x, float y, P2f &rel) const // any piece at
 	}
 	return -1;
 }
+
+bool Puzzle::connect(std::set<Piece> &I, float delta_max)
+{
+	bool ret = false;
+	while (!I.empty())
+	{
+		auto i = *I.begin();
+		ret |= connect(i, delta_max);
+		if (g[i] < 0) I.erase(i); else for (Piece j : groups[g[i]]) I.erase(j);
+	}
+	return false;
+}
+void Puzzle::magnetize(std::set<Piece> &I0, P2f dp)
+{
+	// move the existing pieces
+	std::set<Piece> I(I0);
+	while (!I.empty())
+	{
+		auto i = *I.begin();
+		move(i, pos[i]+dp, false);
+		if (g[i] < 0) I.erase(i); else for (Piece j : groups[g[i]]) I.erase(j);
+	}
+
+	// check for new contacts
+	I = I0; // I are the pieces left to check
+	while (!I.empty())
+	{
+		auto i = *I.begin(); I.erase(i);
+		for (int j = 0; j < N; ++j)
+		{
+			if (I0.count(j)) continue;
+			if (!overlap(i,j)) continue;
+			if ((Preferences::absolute_mode() && delta(j).absq() < 1e-12) || is_big_border_group(j)) continue;
+			if (g[j] < 0) { I0.insert(j); I.insert(j); pick_up(j); } else
+			for (Piece k : groups[g[j]]) { I0.insert(k); I.insert(k); pick_up(k); }
+		}
+	}
+}
+
+bool Puzzle::overlap(Piece i, Piece j) const
+{
+	assert(i >= 0 && i < N);
+	assert(j >= 0 && j < N);
+	//if (i == j) return true;
+
+	auto &a = pos[i], &b = pos[j];
+	if (a.x > b.x + 1.0f || b.x > a.x + 1.0f) return false;
+	if (a.y > b.y + 1.0f || b.y > a.y + 1.0f) return false;
+	return true;
+}

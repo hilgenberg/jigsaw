@@ -22,8 +22,8 @@ public:
 	~Buttons();
 	void draw();
 	bool handle_event(const SDL_Event &e);
-	void reshape(int w, int h);
+	void reshape();
 
 private:
-	Window &w;
+	Window &window;
 };

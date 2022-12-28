@@ -51,6 +51,8 @@ struct Puzzle : public Serializable
 	void move(Piece i, float x, float y, bool animate) { move(i, P2f(x/sx,y/sy), animate); }
 	bool connect(Piece i, float delta_max); // returns true for new connections
 	void pick_up(Piece i); // move to top of z-order (i.e. to end of z vector)
+	void magnetize(std::set<Piece> &I, P2f dp); // recursively puts all touching pieces into magnet
+	bool connect(std::set<Piece> &I, float delta_max); // returns true for new connections
 
 	inline bool align(Piece i, Piece j, float delta_max) const // should they get connected?
 	{
@@ -64,6 +66,7 @@ struct Puzzle : public Serializable
 		       fabs(d.y) < delta_max*sy;
 		//return (pos[i]-pos[j] - P2f(i%W - j%W, i/W - j/W)).absq() < epsq;
 	}
+	bool overlap(Piece i, Piece j) const;
 
 	inline P2f delta(Piece i) const // distance from final place
 	{

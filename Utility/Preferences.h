@@ -16,6 +16,21 @@ enum EdgeType
 	Circle,   // semicircle
 };
 
+enum ScreenEdge
+{
+	LEFT = 0,
+	RIGHT,
+	TOP,
+	BOTTOM
+};
+
+enum ScreenAlign
+{
+	TOP_OR_LEFT = 0,
+	CENTERED,
+	BOTTOM_OR_RIGHT
+};
+
 namespace Preferences
 {
 	bool flush(); // store changes into registry/ini file
@@ -30,17 +45,27 @@ namespace Preferences
 	void fps(int value);
 
 	float solution_alpha();
-	void solution_alpha(float value);
+	void  solution_alpha(float value);
 
 	bool absolute_mode();
 	void absolute_mode(bool value);
 
+	float button_scale();
+	void  button_scale(float value);
+	ScreenEdge button_edge();
+	void  button_edge(ScreenEdge value);
+	ScreenAlign button_align();
+	void  button_align(ScreenAlign value);
+
 	bool vsync();
 	void vsync(bool value);
+
+	bool spiral();
+	void spiral(bool value);
 
 	std::string image();
 	void image(const std::string &path);
 
-	int pieces();
+	int  pieces();
 	void pieces(int n);
 };

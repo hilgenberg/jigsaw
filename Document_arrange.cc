@@ -1,4 +1,5 @@
 #include "Document.h"
+#include "Utility/Preferences.h"
 
 static inline bool even(int i) { return !(i&1); }
 
@@ -35,7 +36,7 @@ static void move(Puzzle &puzzle, Puzzle::Piece i, float x, float y, bool anim, f
 	if (y < y0) y0 = y; if (y+puzzle.sy > y1) y1 = y+puzzle.sy;
 }
 
-void Document::arrange(bool edge, bool spiral)
+void Document::arrange(bool edge)
 {
 	const int W = puzzle.W, H = puzzle.H;
 	if (W < 2 || H < 2 || Preferences::edge() == None) edge = false;
@@ -52,9 +53,8 @@ void Document::arrange(bool edge, bool spiral)
 
 	const float w = puzzle.sx, h = puzzle.sy;
 	const bool ani = (puzzle.N < 1000000);
-	if (spiral)
+	if (Preferences::spiral())
 	{
-		// spiral
 		const double rp = 0.5*1.3*hypot(w, h);
 		P2f c(0.5f*(X0+X1)-0.5f*w, 0.5f*(Y0+Y1)-0.5f*h);
 		double r = 0.5*hypot(X1-X0, Y1-Y0) + rp, a = atan2(Y0-Y1, X0-X1); //-M_PI*0.5;

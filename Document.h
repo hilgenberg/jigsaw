@@ -20,12 +20,12 @@ struct Document : public Serializable
 
 	int hit_test(int mx, int my, bool pick_up, P2f &rel);
 
-	void drag(int piece, const P2f &rel, int mx, int my, P2d &v, double mdx = 0, double mdy = 0);
-	bool drop(int piece);
+	void drag(Puzzle::Piece piece, std::set<Puzzle::Piece> &magnet, const P2f &rel, int mx, int my, P2d &v, double mdx = 0, double mdy = 0);
+	bool drop(Puzzle::Piece piece, std::set<Puzzle::Piece> &magnet);
 	
 	void reset_view();
-	void arrange(bool edge, bool spiral = false);
-	void hide(int piece, bool and_similar = false);
+	void arrange(bool edge);
+	void hide(Puzzle::Piece piece, bool and_similar = false);
 	void shovel(int mx, int my, double dx, double dy);
 
 	Puzzle      puzzle;
