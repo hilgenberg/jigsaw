@@ -91,15 +91,13 @@ Buttons::Buttons(Window &win) : window(win)
 	{
 		glBindVertexArray(VAO[i]);
 		glBindBuffer(GL_ARRAY_BUFFER, VBO[i]);
-		glBufferData(GL_ARRAY_BUFFER, MAX_BUTTONS*(3*sizeof(float) + 2), NULL, GL_DYNAMIC_DRAW);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*)0); // pos
-		glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*)(2*sizeof(float))); // alpha
-		glVertexAttribIPointer(2, 1, GL_UNSIGNED_BYTE,  2, (void*)(3*sizeof(float)*MAX_BUTTONS)); // button image index
-		glVertexAttribIPointer(3, 1, GL_UNSIGNED_BYTE,  2, (void*)(3*sizeof(float)*MAX_BUTTONS + 1)); // active
+		glBufferData(GL_ARRAY_BUFFER, MAX_BUTTONS*(2*sizeof(float) + 2), NULL, GL_DYNAMIC_DRAW);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0); // pos
+		glVertexAttribIPointer(1, 1, GL_UNSIGNED_BYTE,  2, (void*)(2*sizeof(float)*MAX_BUTTONS)); // button image index
+		glVertexAttribIPointer(2, 1, GL_UNSIGNED_BYTE,  2, (void*)(2*sizeof(float)*MAX_BUTTONS + 1)); // active
 		glEnableVertexAttribArray(0);
 		glEnableVertexAttribArray(1);
 		glEnableVertexAttribArray(2);
-		glEnableVertexAttribArray(3);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, texture);
 		glBindBuffer(GL_ARRAY_BUFFER, 0); 
@@ -217,7 +215,7 @@ void Buttons::draw()
 	assert((int)buttons.size() <= MAX_BUTTONS);
 
 	float *data = (float*)glMapNamedBuffer(VBO[current_buf], GL_WRITE_ONLY);
-	unsigned char *d = (unsigned char*)(data+3*MAX_BUTTONS);
+	unsigned char *d = (unsigned char*)(data+2*MAX_BUTTONS);
 	for (const auto &b : buttons)
 	{
 		*d++ = b.index;
@@ -230,7 +228,6 @@ void Buttons::draw()
 		}
 		*data++ = b.pos.x;
 		*data++ = b.pos.y;
-		*data++ = 1.0f; // alpha
 	}
 	GL_CHECK;
 	glUnmapNamedBuffer(VBO[current_buf]);

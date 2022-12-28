@@ -5,7 +5,6 @@ layout(location = 1) uniform vec2 size; // size of buttons
 layout(location = 2) uniform int  n_buttons;
 
 in  vec2  tex;
-in  flat float alpha;
 in  flat uint  actv;
 out vec4  color;
 
@@ -13,5 +12,4 @@ void main()
 {
 	color = texture(image, tex);
 	if (actv == 0) color *= 0.5;
-	color.a *= alpha;
 }
