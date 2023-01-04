@@ -1,10 +1,3 @@
-#version 430 core
-
-layout(location = 0) uniform mat4 view;
-layout(location = 1) uniform vec2 size; // size of area
-layout(location = 2) uniform sampler2D image;
-layout(location = 3) uniform float alpha;
-
 out vec2 tex;
 
 void main()

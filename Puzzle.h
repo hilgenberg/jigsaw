@@ -1,12 +1,13 @@
 #pragma once
+#include "Coordinates.h"
+#include "Utility/Vector.h"
+#include "Persistence/Serializer.h"
+#include "Utility/Preferences.h"
 #include <vector>
 #include <set>
 #include <map>
 #include <cassert>
 #include <functional>
-#include "Utility/Vector.h"
-#include "Persistence/Serializer.h"
-#include "Utility/Preferences.h"
 
 extern double rand01(); //  0..1
 extern double rand11(); // -1..1
@@ -33,52 +34,54 @@ struct Puzzle : public Serializable
 	typedef int     Group;
 	typedef uint8_t Border;
 	int W, H, N; // number of pieces in x and y directions, N = W*H is total
-	std::vector<P2f>  pos; // positions of the pieces (top-left corner, size is (1,1))
+	std::vector<PuzzleCoords>  pos; // positions of the pieces (top-left corner, size is (1,1))
 	std::vector<Piece>  z; // draw in order z[0], z[1], ...
 	std::vector<Group>  g; // which group is the piece in? -1 for none
 	std::vector<std::set<Piece>> groups; // luxury item, simplifies the algorithms
 	std::vector<bool> eh, ev; // horizontal and vertical edges, true = knob points away from zero
 	std::vector<Border> borders; // for easy transfer to shaders, computed from eh+ev
-	float sx, sy; // scaling factors for the pieces (internally this class uses w=h=1!)
+	double sx, sy; // scaling factors for the pieces (internally this class uses w=h=1!)
+
+	inline CameraCoords   to_camera(const PuzzleCoords &p) const { return CameraCoords(p.x*sx, p.y*sy); }
+	inline PuzzleCoords from_camera(const CameraCoords &p) const { return PuzzleCoords(p.x/sx, p.y/sy); }
 	
-	struct Anim { P2f dest, v; Anim() : dest(0.0f, 0.0f), v(0.0f, 0.0f) {} };
+	struct Anim { PuzzleCoords dest, v; Anim() : dest(0.0, 0.0), v(0.0, 0.0) {} };
 	std::map<Piece, Anim> animations;
 	void animate(double dt);
 	void kill_animations() { animations.clear(); }
-
-	P2f  get(Piece i) const { assert(i >= 0 && i < N); return P2f(pos[i].x*sx, pos[i].y*sy); }
-	void move(Piece i, const P2f &p, bool animate);
-	void move(Piece i, float x, float y, bool animate) { move(i, P2f(x/sx,y/sy), animate); }
-	bool connect(Piece i, float delta_max); // returns true for new connections
+	
+	void move(Piece i, const PuzzleCoords &p, bool animate);
+	bool connect(Piece i, double delta_max); // returns true for new connections
 	void pick_up(Piece i); // move to top of z-order (i.e. to end of z vector)
-	void magnetize(std::set<Piece> &I, P2f dp); // recursively puts all touching pieces into magnet
-	bool connect(std::set<Piece> &I, float delta_max); // returns true for new connections
+	void magnetize(std::set<Piece> &I, PuzzleCoords dp); // recursively puts all touching pieces into magnet
+	bool connect(std::set<Piece> &I, double delta_max); // returns true for new connections
+	Piece hit_test(const PuzzleCoords &p, PuzzleCoords &rel) const;
 
-	inline bool align(Piece i, Piece j, float delta_max) const // should they get connected?
+	inline bool align(Piece i, Piece j, double delta_max) const // should they get connected?
 	{
 		assert(i >= 0 && i < N);
 		assert(j >= 0 && j < N);
 		assert(i != j);
 		assert(abs(i-j) == 1 || abs(i-j) == W);
-		assert(delta_max > 0.0f);
-		P2f d = pos[i]-pos[j] - P2f(i%W - j%W, i/W - j/W);
+		assert(delta_max > 0.0);
+		PuzzleCoords d = pos[i]-pos[j] - P2d(i%W - j%W, i/W - j/W);
 		return fabs(d.x) < delta_max*sx &&
 		       fabs(d.y) < delta_max*sy;
-		//return (pos[i]-pos[j] - P2f(i%W - j%W, i/W - j/W)).absq() < epsq;
+		//return (pos[i]-pos[j] - P2d(i%W - j%W, i/W - j/W)).absq() < epsq;
 	}
 	bool overlap(Piece i, Piece j) const;
 
-	inline P2f delta(Piece i) const // distance from final place
+	inline PuzzleCoords delta(Piece i) const // distance from final place
 	{
 		assert(i >= 0 && i < N);
-		return pos[i] - P2f(i%W-0.5f*W, i/W-0.5f*H);
+		return pos[i] - P2d(i%W-0.5f*W, i/W-0.5f*H);
 	}
 
-	inline bool align(Piece i, float delta_max) const // should it snap into place?
+	inline bool align(Piece i, double delta_max) const // should it snap into place?
 	{
 		assert(i >= 0 && i < N);
-		assert(delta_max > 0.0f);
-		P2f d = delta(i);
+		assert(delta_max > 0.0);
+		PuzzleCoords d = delta(i);
 		return fabs(d.x) < delta_max*sx &&
 		       fabs(d.y) < delta_max*sy;
 	}
@@ -88,7 +91,7 @@ struct Puzzle : public Serializable
 		if (g[i] >= 0) return false;
 		if (Preferences::absolute_mode())
 		{
-			if (delta(i).absq() < 1e-12f) return false;
+			if (delta(i).absq() < 1e-12) return false;
 		}
 		else
 		{
@@ -111,8 +114,6 @@ struct Puzzle : public Serializable
 			default: assert(false);
 		}
 	}
-	Piece hit_test(const P2f &p, P2f &rel) const { return hit_test(p.x, p.y, rel); }
-	Piece hit_test(float x, float y, P2f &rel) const; // any piece at (x,y)?
 
 	bool is_edge_piece(Piece i) const
 	{
@@ -123,7 +124,8 @@ struct Puzzle : public Serializable
 
 	bool is_big_border_group(Piece i) const;
 
-	void bbox(float &x0, float &x1, float &y0, float &y1, bool groups_only = false) const
+	// returns CameraCoords
+	void bbox(double &x0, double &x1, double &y0, double &y1, bool groups_only = false) const
 	{
 		int i = 0;
 		if (groups_only) while (i < N && g[i] < 0) ++i;
@@ -133,7 +135,7 @@ struct Puzzle : public Serializable
 		for (++i; i < N; ++i)
 		{
 			if (groups_only && g[i] < 0) continue;
-			const P2f &p = pos[i];
+			const PuzzleCoords &p = pos[i];
 			if (p.x < x0) x0 = p.x;
 			if (p.x > x1) x1 = p.x;
 			if (p.y < y0) y0 = p.y;

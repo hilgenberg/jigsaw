@@ -2,9 +2,9 @@
 #include "Puzzle.h"
 #include "Camera.h"
 
-static P2d    cam_p0;
-static double cam_R0;
-static P2f    puz_p0;
+static CameraCoords cam_p0;
+static double       cam_R0;
+static PuzzleCoords puz_p0;
 
 VictoryAnimation::VictoryAnimation(Puzzle &puzzle, Camera &camera)
 : puzzle(puzzle), camera(camera), t(0.0)
@@ -12,7 +12,7 @@ VictoryAnimation::VictoryAnimation(Puzzle &puzzle, Camera &camera)
 	const int W = puzzle.W, H = puzzle.H;
 	cam_p0 = camera.center;
 	cam_R0 = camera.R;
-	puz_p0 = puzzle.N > 0 ? puzzle.pos[0]+P2f(W*0.5f, H*0.5f) : P2f(0,0);
+	puz_p0 = puzzle.N > 0 ? puzzle.pos[0]+P2d(W*0.5, H*0.5) : P2d(0,0);
 	puzzle.kill_animations();
 }
 
@@ -25,7 +25,7 @@ void VictoryAnimation::run(double dt)
 	const int W = puzzle.W, H = puzzle.H;
 	const int w = camera.screen_w(), h = camera.screen_h();
 	double R = 1.125 * std::max(W*puzzle.sx*h, H*puzzle.sy*w) * 0.5 / std::max(w, h); // see Camera::view_box(...)
-	P2f c(W*0.5f, H*0.5f);
+	PuzzleCoords c(W*0.5, H*0.5);
 	if (t < 1.0)
 	{
 		double tt = S(t);
@@ -43,7 +43,7 @@ void VictoryAnimation::run(double dt)
 	{
 		for (int x = 0; x < W; ++x)
 		{
-			P2f &p = puzzle.pos[W*y+x];
+			PuzzleCoords &p = puzzle.pos[W*y+x];
 			p.set(x-c.x, y-c.y);
 			#if 1
 			if      (t < 1.0) { p.x *= 1.0+S(t); }

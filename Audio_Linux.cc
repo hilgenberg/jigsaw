@@ -1,3 +1,4 @@
+#ifdef LINUX
 #include <AL/al.h>
 #include <AL/alc.h>
 #include <AL/alut.h>
@@ -41,3 +42,4 @@ void audio_quit()
 	alDeleteSources(1, &source); source = 0;
 	alDeleteBuffers(1, &buffer); buffer = 0;
 }
+#endif

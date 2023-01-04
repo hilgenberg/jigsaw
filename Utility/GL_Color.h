@@ -34,7 +34,6 @@ struct GL_Color : public Serializable
 		if (a < 0.0f) a = 0.0f; if (a > 1.0f) a = 1.0f;
 	}
 	
-	void set() const;
 	void set_clear() const;
 	
 	bool operator== (const GL_Color &c) const{ return fabsf(r-c.r) < 1e-8f && fabsf(g-c.g) < 1e-8f && fabsf(b-c.b) < 1e-8f && fabsf(a-c.a) < 1e-8f; }

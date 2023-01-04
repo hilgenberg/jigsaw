@@ -3,7 +3,7 @@
 #include "GL_Color.h"
 #include <vector>
 
-struct GL_Image : public Serializable
+struct GL_Image final : public Serializable
 {
 	GL_Image() : _w(0), _h(0) { }
 	GL_Image(const GL_Image &i)

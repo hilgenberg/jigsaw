@@ -1,6 +1,6 @@
 #pragma once
-class Puzzle;
-class Camera;
+struct Puzzle;
+class  Camera;
 
 class VictoryAnimation
 {

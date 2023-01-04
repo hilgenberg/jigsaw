@@ -1,18 +1,10 @@
 #pragma once
-#include <map>
-#include "Vector.h"
-#include "Matrix.h"
-#include <cassert>
-#include <GL/gl.h>
+#ifndef DEBUG
 
-GLuint compileShader(const char *src, GLuint type);
-GLuint compileShaders(const std::map<GLuint, const char *> &shaders);
+#define GL_CHECK
 
-void uniform(GLuint index, const M3d &mat);
-void uniform(GLuint index, const M4d &mat);
+#elif defined(LINUX)
 
-#ifdef DEBUG
-#include <GL/glu.h>
 #include <iostream>
 
 #define GL_CHECK do{\
@@ -21,6 +13,17 @@ void uniform(GLuint index, const M4d &mat);
 	assert(err == GL_NO_ERROR);\
 }while(0)
 
+#elif defined(ANDROID)
+
+extern const char *gl_error_string(GLenum err) noexcept;
+#include <android/log.h>
+
+#define GL_CHECK do{\
+	GLenum err = glGetError();\
+	if (err) __android_log_print(ANDROID_LOG_ERROR, "JIGSAW", "glERROR: %s at %s, %d\n", gl_error_string(err), __FILE__, __LINE__);\
+	assert(err == GL_NO_ERROR);\
+}while(0)
+
 #else
-#define GL_CHECK
+#error "add GL_CHECK implementation"
 #endif

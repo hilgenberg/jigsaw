@@ -27,9 +27,19 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/param.h>
-#include <pthread.h>
+//#include <pthread.h>
+#endif
+
+#ifdef LINUX
 #include <GL/glew.h>
 #include <GL/gl.h>
+#include <GL/glu.h>
+#endif
+
+#ifdef ANDROID
+#include <EGL/egl.h>
+#include <GLES3/gl3.h>
+#include <GLES3/gl32.h>
 #endif
 
 #include "Utility/StringFormatting.h"

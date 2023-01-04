@@ -1,10 +1,3 @@
-#version 430 core
-
-layout(location = 0) uniform mat4 view;
-layout(location = 1) uniform sampler2D image;
-layout(location = 2) uniform ivec2 count;
-layout(location = 3) uniform vec2 size; // size of piece, p.x or p.y will be 1.0, the other one gte
-
 in  vec2      tex_coord;
 in  flat uint border;
 in  vec2      orig;

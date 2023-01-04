@@ -1,3 +1,4 @@
+#ifdef LINUX
 #include "GUI.h"
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_sdl.h"
@@ -74,13 +75,16 @@ void GUI::update()
 
 	ImGui::GetStyle().FrameBorderSize = dark ? 0.0f : 1.0f;
 
-	ImGui::Begin("##Preferences");
+	// Always center preference window when appearing
+	ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+	ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+	ImGui::Begin("Preferences", NULL, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoCollapse);
 	ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
 	bool b0, b; int i0, i;
 	
 	static const char *edges[] = {"Square Tiles", "Regular Jigsaw", "Triangular Edge", "Rectangular Edge", "Semicircle"};
 	i = i0 = Preferences::edge();
-	ImGui::Combo("Edges", &i, edges, 5);
+	ImGui::Combo("##Edges", &i, edges, 5);
 	if (i != i0) Preferences::edge((EdgeType)i);
 
 	float f0 = Preferences::solution_alpha(), f = f0;
@@ -111,14 +115,14 @@ void GUI::update()
 	
 	static const char *button_edges[] = {"Left", "Right", "Top", "Bottom"};
 	i = i0 = Preferences::button_edge();
-	ImGui::Combo("Button Placement", &i, button_edges, 4);
+	ImGui::Combo("##Button Placement", &i, button_edges, 4);
 	if (i != i0) { Preferences::button_edge((ScreenEdge)i); w.buttons.reshape(); }
 	bool button_v = (i == LEFT || i == RIGHT);
 	
 	static const char *button_align_h[] = {"Left", "Center", "Right"};
 	static const char *button_align_v[] = {"Top", "Center", "Bottom"};
 	i = i0 = Preferences::button_align();
-	ImGui::Combo("Button Alignment", &i, button_v ? button_align_v : button_align_h, 3);
+	ImGui::Combo("##Button Alignment", &i, button_v ? button_align_v : button_align_h, 3);
 	if (i != i0) { Preferences::button_align((ScreenAlign)i); w.buttons.reshape(); }
 
 	ImGui::Spacing();
@@ -255,3 +259,4 @@ bool GUI::handle_event(const SDL_Event &event)
 	}
 	return handled;
 }
+#endif

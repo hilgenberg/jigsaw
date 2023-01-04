@@ -1,4 +1,5 @@
 #pragma once
+#ifdef LINUX
 #include <SDL.h>
 #include "imgui/imgui.h"
 class Window;
@@ -30,3 +31,4 @@ private:
 	bool show_demo_window = false;
 	#endif
 };
+#endif

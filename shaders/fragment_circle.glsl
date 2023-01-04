@@ -1,8 +1,4 @@
-#version 430 core
 #define M_PI 3.1415926535897932384626433832795
-
-layout(location = 0) uniform mat4 view;
-layout(location = 1) uniform sampler2D image;
 
 in  vec2      tex_coord;
 in  flat uint border;

@@ -21,13 +21,13 @@ Puzzle::Puzzle()
 void Puzzle::save(Serializer &s) const
 {
 	s.uint32_(W); s.uint32_(H);
-	s.float_(sx); s.float_(sy);
+	s.double_(sx); s.double_(sy);
 	for (auto v : ev) s.bool_(v);
 	for (auto v : eh) s.bool_(v);
 	for (int i = 0; i < N; ++i)
 	{
-		s.float_(pos[i].x);
-		s.float_(pos[i].y);
+		s.double_(pos[i].x);
+		s.double_(pos[i].y);
 		s.int32_(g[i]);
 		s.int32_(z[i]);
 	}
@@ -39,8 +39,8 @@ void Puzzle::load(Deserializer &s)
 	s.uint32_(u); W = u;
 	s.uint32_(u); H = u;
 	N = W*H;
-	s.float_(sx);
-	s.float_(sy);
+	s.double_(sx);
+	s.double_(sy);
 
 	g.resize(N);
 	pos.resize(N);
@@ -53,8 +53,8 @@ void Puzzle::load(Deserializer &s)
 	int g_max = -1;
 	for (int i = 0; i < N; ++i)
 	{
-		s.float_(pos[i].x);
-		s.float_(pos[i].y);
+		s.double_(pos[i].x);
+		s.double_(pos[i].y);
 		s.int32_(k); g[i] = k; if (k > g_max) g_max = k;
 		s.int32_(k); z[i] = k;
 
@@ -148,15 +148,15 @@ void Puzzle::shuffle(bool grid)
 
 	if (grid)
 	{
-		const float spcx = 0.3*sx + 0.5f, spcy = 0.3*sy + 0.5f;
+		const double spcx = 0.3*sx + 0.5, spcy = 0.3*sy + 0.5;
 		for (int j = 0; j < H; ++j)
 		{
 			for (int i = 0; i < W; ++i)
 			{
 				int k = j*W + i;
 				pos[z[k]].set(
-					(i-0.5f*W)*(sx+spcx)+0.5f*spcx,
-					(j-0.5f*H)*(sy+spcy)+0.5f*spcy);
+					(i-0.5*W)*(sx+spcx)+0.5*spcx,
+					(j-0.5*H)*(sy+spcy)+0.5*spcy);
 			}
 		}
 	}
@@ -164,8 +164,8 @@ void Puzzle::shuffle(bool grid)
 	{
 		for (int i = 0; i < N; ++i)
 		{
-			float x = rand01() * (W-1), y = rand01() * (H-1);
-			pos[i].set(x-0.5f*W, y-0.5f*H);
+			double x = rand01() * (W-1), y = rand01() * (H-1);
+			pos[i].set(x-0.5*W, y-0.5*H);
 		}
 	}
 
@@ -223,7 +223,7 @@ void Puzzle::pick_up(Piece i)
 	sanity_checks();
 }
 
-void Puzzle::move(Piece i, const P2f &p, bool animate)
+void Puzzle::move(Piece i, const PuzzleCoords &p, bool animate)
 {
 	assert(i >= 0 && i < N);
 	if (!animate)
@@ -234,7 +234,7 @@ void Puzzle::move(Piece i, const P2f &p, bool animate)
 		if (g[i] >= 0) for (Piece j : groups[g[i]])
 		{
 			animations.erase(j);
-			pos[j] = pos[i] - P2f(i%W - j%W, i/W - j/W);
+			pos[j] = pos[i] - P2d(i%W - j%W, i/W - j/W);
 		}
 	}
 	else
@@ -255,7 +255,7 @@ void Puzzle::animate(double dt)
 		for (int k = 5; k >= 0; --k)
 		{
 			pos[i] += a.v * dt;
-			float dq = (pos[i]-a.dest).absq();
+			double dq = (pos[i]-a.dest).absq();
 			if (dq < std::max(0.01, a.v.absq()*dt))
 			{
 				it = animations.erase(it);
@@ -265,7 +265,7 @@ void Puzzle::animate(double dt)
 			else if (k == 0)
 				++it;
 			
-			P2f dx = a.dest - pos[i]; 
+			P2d dx = a.dest - pos[i]; 
 			a.v += dx*dt;
 
 			// dampen lateral movement, so we don't get orbits
@@ -274,18 +274,18 @@ void Puzzle::animate(double dt)
 		}
 
 		if (g[i] >= 0) for (Piece j : groups[g[i]])
-			pos[j] = pos[i] - P2f(i%W - j%W, i/W - j/W);
+			pos[j] = pos[i] - P2d(i%W - j%W, i/W - j/W);
 	}
 }
 
-bool Puzzle::connect(Piece i, float delta_max)
+bool Puzzle::connect(Piece i, double delta_max)
 {
 	assert(i >= 0 && i < N);
 	assert(!animations.count(i));
 
 	bool snap = (Preferences::absolute_mode() && delta(i).absq() > 1e-12 && align(i, delta_max));
 
-	if (snap) move(i, P2f(i%W - 0.5f*W,i/W - 0.5f*H), false);
+	if (snap) move(i, P2d(i%W - 0.5*W,i/W - 0.5*H), false);
 
 	// check for new connections
 	std::set<Piece> adding;
@@ -355,7 +355,7 @@ bool Puzzle::connect(Piece i, float delta_max)
 		for (Piece j : G)
 		{
 			// put into exact location
-			pos[j] = pos[i] - P2f(i%W - j%W, i/W - j/W);
+			pos[j] = pos[i] - P2d(i%W - j%W, i/W - j/W);
 			animations.erase(j);
 
 			// and recursion
@@ -398,21 +398,22 @@ bool Puzzle::is_big_border_group(Piece i) const
 
 // helper functions from the shader code:
 static inline int tx(int b) { return (b & 1) - ((b>>1) & 1); }
-static inline float dq(const P2f &v, float r) { return v.absq() - r*r; }
-static inline float min(float a, float b) { return std::min(a,b); }
-static inline float max(float a, float b) { return std::max(a,b); }
-Puzzle::Piece Puzzle::hit_test(float x, float y, P2f &rel) const // any piece at (x,y)?
+static inline float dq(const P2d &v, double r) { return v.absq() - r*r; }
+static inline float min(double a, double b) { return std::min(a,b); }
+static inline float max(double a, double b) { return std::max(a,b); }
+Puzzle::Piece Puzzle::hit_test(const PuzzleCoords &p, PuzzleCoords &rel) const // any piece at p?
 {
 	float d1, d0;
 	const auto edge = Preferences::edge();
 	overhang(edge, d1, d0);
-	float d = std::max(d1, d0);
+	double d = std::max(d1, d0);
+	const auto x = p.x, y = p.y;
 
 	for (int j = N-1; j >= 0; --j)
 	{
 		const int i = z[j];
-		const float px = pos[i].x, py = pos[i].y;
-		if (x < px-d || x > px+1.0f+d || y < py-d || y > py+1.0f+d) continue;
+		const double px = pos[i].x, py = pos[i].y;
+		if (x < px-d || x > px+1.0+d || y < py-d || y > py+1.0+d) continue;
 		
 		const int b = (int)borders[i];
 		const int bl = tx(b);
@@ -420,7 +421,7 @@ Puzzle::Piece Puzzle::hit_test(float x, float y, P2f &rel) const // any piece at
 		const int bt = tx(b>>4);
 		const int bb = tx(b>>6);
 
-		float x0 = 0.0f, x1 = 1.0f, y0 = 0.0f, y1 = 1.0f;
+		double x0 = 0.0, x1 = 1.0, y0 = 0.0, y1 = 1.0;
 		if (bl == 1) x0 -= d1; else if (bl == -1) x0 -= d0;
 		if (br == 1) x1 += d1; else if (br == -1) x1 += d0;
 		if (bt == 1) y0 -= d1; else if (bt == -1) y0 -= d0;
@@ -428,15 +429,15 @@ Puzzle::Piece Puzzle::hit_test(float x, float y, P2f &rel) const // any piece at
 		if (x-px < x0 || x-px > x1 || y-py < y0 || y-py > y1) continue;
 
 		bool hit = true;
-		P2f orig(x-px, y-py);
+		P2d orig(x-px, y-py);
 		#define discard hit=false
-		#define vec2 P2f
+		#define vec2 P2d
 		switch (edge)
 		{
 			case None: break;
 			case Regular:
 			{
-				const float R = 1.5, r = 0.15, d0 = 0.0, h = 0.08578643762690485;
+				const double R = 1.5, r = 0.15, d0 = 0.0, h = 0.08578643762690485;
 				if (bl*max(dq(vec2(    bl*(h-R), 0.5)-orig, R), -dq(vec2(   -bl*d0, 0.5)-orig, r)) < -1e-8) discard;
 				if (br*max(dq(vec2(1.0+br*(R-h), 0.5)-orig, R), -dq(vec2(1.0+br*d0, 0.5)-orig, r)) < -1e-8) discard;
 				if (bt*max(dq(vec2(0.5,     bt*(h-R))-orig, R), -dq(vec2(0.5,    -bt*d0)-orig, r)) < -1e-8) discard;
@@ -445,20 +446,20 @@ Puzzle::Piece Puzzle::hit_test(float x, float y, P2f &rel) const // any piece at
 			}
 			case Triangle:
 			{
-				const float h1 = 0.15f, h2 = 0.05f, w = 0.5f/3.0f;
-				const float x = fabs(orig.x-0.5), y = fabs(orig.y-0.5f);
-				const float a = (h1+h2)/w, b = h1*h2/(h1-h2);
-				const float xx = min(a*x - h1, b - 2.0f*b*x);
-				const float yy = min(a*y - h1, b - 2.0f*b*y);
-				if (     orig.y < bt * xx) discard;
-				if (1.0f-orig.y < bb * xx) discard;
-				if (     orig.x < bl * yy) discard;
-				if (1.0f-orig.x < br * yy) discard;
+				const double h1 = 0.15, h2 = 0.05, w = 0.5/3.0;
+				const double x = fabs(orig.x-0.5), y = fabs(orig.y-0.5);
+				const double a = (h1+h2)/w, b = h1*h2/(h1-h2);
+				const double xx = min(a*x - h1, b - 2.0*b*x);
+				const double yy = min(a*y - h1, b - 2.0*b*y);
+				if (    orig.y < bt * xx) discard;
+				if (1.0-orig.y < bb * xx) discard;
+				if (    orig.x < bl * yy) discard;
+				if (1.0-orig.x < br * yy) discard;
 				break;
 			}
 			case Groove:
 			{
-				float h = 0.034, r = 0.2;
+				double h = 0.034, r = 0.2;
 				if (bt*fabs(orig.x-0.5) > bt*r && orig.y <     h) discard;
 				if (bb*fabs(orig.x-0.5) > bb*r && orig.y > 1.0-h) discard;
 				if (bl*fabs(orig.y-0.5) > bl*r && orig.x <     h) discard;
@@ -467,8 +468,8 @@ Puzzle::Piece Puzzle::hit_test(float x, float y, P2f &rel) const // any piece at
 			}
 			case Circle:
 			{
-				const float r = 0.2f;
-				const float x = fabs(orig.x-0.5f), y = fabs(orig.y-0.5f);
+				const double r = 0.2;
+				const double x = fabs(orig.x-0.5), y = fabs(orig.y-0.5);
 				if (bt*orig.y < 0.0 && bt*hypotf(x,     orig.y) > bt*r) discard;
 				if (bb*orig.y > bb  && bb*hypotf(x, 1.0-orig.y) > bb*r) discard;
 				if (bl*orig.x < 0.0 && bl*hypotf(y,     orig.x) > bl*r) discard;
@@ -489,7 +490,7 @@ Puzzle::Piece Puzzle::hit_test(float x, float y, P2f &rel) const // any piece at
 	return -1;
 }
 
-bool Puzzle::connect(std::set<Piece> &I, float delta_max)
+bool Puzzle::connect(std::set<Piece> &I, double delta_max)
 {
 	bool ret = false;
 	while (!I.empty())
@@ -500,7 +501,7 @@ bool Puzzle::connect(std::set<Piece> &I, float delta_max)
 	}
 	return false;
 }
-void Puzzle::magnetize(std::set<Piece> &I0, P2f dp)
+void Puzzle::magnetize(std::set<Piece> &I0, PuzzleCoords dp)
 {
 	// move the existing pieces
 	std::set<Piece> I(I0);
@@ -534,7 +535,7 @@ bool Puzzle::overlap(Piece i, Piece j) const
 	//if (i == j) return true;
 
 	auto &a = pos[i], &b = pos[j];
-	if (a.x > b.x + 1.0f || b.x > a.x + 1.0f) return false;
-	if (a.y > b.y + 1.0f || b.y > a.y + 1.0f) return false;
+	if (a.x > b.x + 1.0 || b.x > a.x + 1.0) return false;
+	if (a.y > b.y + 1.0 || b.y > a.y + 1.0) return false;
 	return true;
 }

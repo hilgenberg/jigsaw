@@ -1,5 +1,4 @@
 #include "GL_Color.h"
-#include <GL/gl.h>
 #include <cstring>
 #include "StringFormatting.h"
 
@@ -16,11 +15,6 @@ void GL_Color::load(Deserializer &s)
 	s.float_(g);
 	s.float_(b);
 	s.float_(a);
-}
-
-void GL_Color::set() const
-{
-	glColor4fv(v);
 }
 
 void GL_Color::set_clear() const

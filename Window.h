@@ -3,8 +3,9 @@
 #include "Buttons.h"
 #include "Utility/FPSCounter.h"
 #include "Victory.h"
-#include <map>
+#ifdef LINUX
 #include <SDL_events.h>
+#endif
 
 enum class Tool
 {
@@ -17,7 +18,22 @@ enum class Tool
 class Window 
 {
 public:
+	#ifdef LINUX
 	Window(SDL_Window* window, Document &doc);
+	bool handle_event(const SDL_Event &event);
+	bool handle_key(SDL_Keysym key, bool release);
+	#endif
+
+	#ifdef ANDROID
+	Window(Document &doc);
+	~Window();
+
+	// ds ==  1: touch down
+	// ds == -1: touch lifted
+	// ds ==  0: movement
+	// special case ds == -1, n == 0: lift all, cancel gesture
+	void handle_touch(int ds, int n, int *id, float *x, float *y);
+	#endif
 
 	bool needs_redraw() const{ return need_redraw; }
 	bool animating() const{ return tnf > 0.0; }
@@ -29,34 +45,42 @@ public:
 	void redraw(){ need_redraw = true; }
 
 	void reshape(int w, int h);
-	bool handle_event(const SDL_Event &event);
-	bool handle_key(SDL_Keysym key, bool release);
+	
 	P2<int> size() const { return P2<int>(w,h); }
 	Tool active_tool() const { return tool; }
 
 private:
 	friend class Buttons;
-	friend class GUI;
 	void button_action(ButtonAction a);
 
 	Document   &doc;
 	Buttons     buttons;
-	SDL_Window *window;
-	int         w, h;
+	int         w = 0, h = 0;
 	Tool        tool = Tool::NONE;
 
-	double      tnf;        // scheduled time for next frame
-	double      last_frame; // time of last animate() call
+	double      tnf = -1.0;        // scheduled time for next frame
+	double      last_frame = -1.0; // time of last animate() call
 	FPSCounter  fps;
-	bool        need_redraw;
+	bool        need_redraw = true;
 
-	int         dragging = -1;
-	P2d         drag_v; // move camera while dragging piece to the edge?
-	P2f         drag_rel; // where is the mouse inside the dragged piece?
+	Puzzle::Piece dragging = -1;
+	P2d           drag_v {0.0, 0.0}; // move camera while dragging piece to the edge?
+	PuzzleCoords  drag_rel; // where is the mouse inside the dragged piece?
 	std::set<Puzzle::Piece> magnetized;
 
 	std::unique_ptr<VictoryAnimation> va;
-	std::map<SDL_Keycode, double> ikeys; // pressed key -> inertia
 	void start_animations();
+
+	#ifdef LINUX
+	friend class GUI;
+	SDL_Window *window;
+	std::map<SDL_Keycode, double> ikeys; // pressed key -> inertia
+	#endif
+
+	#ifdef ANDROID
+	const EGLContext context;
+	std::map<int, ScreenCoords> pointer_state;
+	int drag_pointer_id = -1;
+	#endif
 };
 

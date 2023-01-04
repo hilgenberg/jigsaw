@@ -1,7 +1,5 @@
 #include "Camera.h"
 #include "Utility/GL_Util.h"
-#include <GL/gl.h>
-#include <GL/glu.h>
 
 void Camera::save(Serializer &s) const
 {
@@ -27,7 +25,7 @@ void Camera::viewport(int w_, int h_)
 	else       { range.y = R; range.x = R / hr; }
 }
 
-void Camera::set(GLuint u, int aa_pass, int num_passes) const
+M4d Camera::matrix(int aa_pass, int num_passes) const
 {
 	static constexpr double jit4[4][2] = {{0.375, 0.25}, {0.125, 0.75}, {0.875, 0.25}, {0.625, 0.75}};
 	static constexpr double jit8[8][2] = {{0.5625, 0.4375}, {0.0625, 0.9375}, {0.3125, 0.6875}, {0.6875, 0.8125}, {0.8125, 0.1875}, {0.9375, 0.5625}, {0.4375, 0.0625}, {0.1875, 0.3125}};
@@ -77,17 +75,13 @@ void Camera::set(GLuint u, int aa_pass, int num_passes) const
 	im.a24 = (b+t)*0.5;
 	im.a34 = (n+f)*0.5;*/
 
-	uniform(u, m);
-}
-
-void Camera::move(double dx, double dy)
-{
-	center.x += dx;
-	center.y += dy;
+	return m;
 }
 
 void Camera::zoom(double f)
 {
+	if (!isfinite(f) || f < 1e-8f) return;
+
 	constexpr double zmin = 1.0e-12, zmax = 1.0e12;
 	range *= f;
 	if (range.x < zmin)
@@ -104,39 +98,17 @@ void Camera::zoom(double f)
 	R = (w < h ? range.x : range.y);
 }
 
-void Camera::translate(double dx, double dy, double dz, int mx, int my)
+void Camera::zoom(double f, const ScreenCoords &c)
 {
-	double f = exp(-dz * 0.02);
-	double pixel = pixel_size();
-	
-	dx *= pixel;
-	dy *= pixel;
+	double x0 = 2.0 * c.x / (w-1) - 1.0; // [-1,1]
+	double y0 = 2.0 * c.y / (h-1) - 1.0;
+	double x1 = x0 * range.x + center.x;
+	double y1 = y0 * range.y + center.y;
+	zoom(f);
+	if (w > 1 && h > 1)
 	{
-		move(dx, dy);
-
-		// zoom with dz, but keep (mx,my) where it is
-		double x0 = 2.0 * mx / (w-1) - 1.0; // [-1,1]
-		double y0 = 2.0 * my / (h-1) - 1.0;
-		double x1 = x0 * range.x + center.x;
-		double y1 = y0 * range.y + center.y;
-		zoom(f);
-		if (w > 1 && h > 1 && mx >= 0 && my >= 0 && mx < w && my < h)
-		{
-			double x2 = x0 * range.x + center.x;
-			double y2 = y0 * range.y + center.y;
-			move(x1-x2, y1-y2);
-		}
+		double x2 = x0 * range.x + center.x;
+		double y2 = y0 * range.y + center.y;
+		move(P2d(x1-x2, y1-y2));
 	}
-}
-P2f Camera::convert(int mx, int my) const
-{
-	return P2f(
-		(2.0 * mx / (w-1) - 1.0) * range.x + center.x,
-		(2.0 * my / (h-1) - 1.0) * range.y + center.y);
-}
-P2f Camera::dconvert(double dx, double dy) const
-{
-	return P2f(
-		2.0 * range.x * dx / (w-1),
-		2.0 * range.y * dy / (h-1));
 }

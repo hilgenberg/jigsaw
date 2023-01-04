@@ -1,3 +1,5 @@
+#ifdef LINUX
+
 #include <signal.h>
 #include "Window.h"
 #include "Utility/Preferences.h"
@@ -154,7 +156,7 @@ int main(int argc, char *argv[])
 		else
 		{
 			std::filesystem::path p = Preferences::directory(); p /= "state";
-			if (!is_regular_file(p)) throw std::runtime_error("No savegame found.");
+			if (!is_regular_file(p)) throw std::runtime_error("No savegame found. Please call with arguments!");
 			FILE *F = fopen(p.c_str(), "r");
 			if (!F) throw std::runtime_error("No savegame found.");
 			try
@@ -244,3 +246,6 @@ int main(int argc, char *argv[])
 
 	return retcode;
 }
+
+#endif
+

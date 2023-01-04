@@ -48,7 +48,7 @@ variants = {
 		"release": ['-O3 -s -DNDEBUG', '-s -zrelro -znow'],
 }
 
-cflags = """-DUSE_PTHREADS
+cflags = """-DLINUX
   -Wall -Wextra
   -Wno-sign-compare
   -Wno-deprecated-declarations
@@ -209,6 +209,7 @@ rule link
 		for R,D,F in os.walk('.'):
 			if "stuff" in D: D.remove("stuff")
 			if ".git" in D: D.remove(".git")
+			if "Android" in D: D.remove("Android")
 			for v in variants:
 				if f"build_{v}" in D: D.remove(f"build_{v}")
 

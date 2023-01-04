@@ -2,33 +2,24 @@
 #include "data.h"
 #include "shaders.h"
 #include "Utility/GL_Util.h"
+#include "Utility/GL_Program.h"
 #include "Utility/Preferences.h"
 #include "Window.h"
-#include <GL/gl.h>
-#include <GL/glu.h>
 
-static GLuint program = 0;
+static GL_Program program;
 static GLuint VBO[2] = {0,0}, VAO[2] = {0,0}; // use double buffering for data to avoid stalls in glMap
 static GLuint texture = 0;
 static int    current_buf = 0;
 static constexpr int MAX_BUTTONS = N_IMAGES;
 static P3f button_size(0, 0, 0); // (w,h,spacing)
-static int clicked_button = -1;
 
-struct Button
+bool Buttons::Button::hit(const Window &w, int mx, int my) const
 {
-	ButtonAction index; // index into button texture
-	P2f pos; // center position
-
-	bool hit(const Window &w, int mx, int my) const
-	{
-		P2<int> s = w.size();
-		float x = 2.0f*mx / s.x - 1.0f, y = 1.0f - 2.0f*my / s.y;
-		return fabs(x-pos.x) < button_size.x*0.5f &&
-		       fabs(y-pos.y) < button_size.y*0.5f;
-	}
-};
-static std::vector<Button> buttons;
+	P2<int> s = w.size();
+	float x = 2.0f*mx / s.x - 1.0f, y = 1.0f - 2.0f*my / s.y;
+	return fabs(x-pos.x) < button_size.x*0.5f &&
+	fabs(y-pos.y) < button_size.y*0.5f;
+}
 
 Buttons::Buttons(Window &win) : window(win)
 {
@@ -77,21 +68,19 @@ Buttons::Buttons(Window &win) : window(win)
 
 	//--- setup GL --------------------------------------------------------
 
-	std::map<GLuint, const char *> shaders = {
-		{GL_VERTEX_SHADER,   buttons_vertex},
-		{GL_GEOMETRY_SHADER, buttons_geometry},
-		{GL_FRAGMENT_SHADER, buttons_fragment}
-	};
-	program = compileShaders(shaders);
-	GL_CHECK;
+	program.add_uniform("sampler2D", "image");
+	program.add_uniform("vec2",      "size"); // size of buttons
+	program.add_uniform("int",       "n_buttons"); // number of buttons in the texture
+	program.add_shaders(buttons_vertex, buttons_geometry, buttons_fragment);
 
 	glGenVertexArrays(2, VAO);
 	glGenBuffers(2, VBO);
+	#define VERTEX_DATA_SIZE MAX_BUTTONS*(2*sizeof(float) + 2) /* needed below for the GLES version */
 	for (int i = 0; i < 2; ++i)
 	{
 		glBindVertexArray(VAO[i]);
 		glBindBuffer(GL_ARRAY_BUFFER, VBO[i]);
-		glBufferData(GL_ARRAY_BUFFER, MAX_BUTTONS*(2*sizeof(float) + 2), NULL, GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, VERTEX_DATA_SIZE, NULL, GL_DYNAMIC_DRAW);
 		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0); // pos
 		glVertexAttribIPointer(1, 1, GL_UNSIGNED_BYTE,  2, (void*)(2*sizeof(float)*MAX_BUTTONS)); // button image index
 		glVertexAttribIPointer(2, 1, GL_UNSIGNED_BYTE,  2, (void*)(2*sizeof(float)*MAX_BUTTONS + 1)); // active
@@ -116,7 +105,6 @@ Buttons::~Buttons()
 	glDeleteVertexArrays(2, VAO); VAO[0] = VAO[1] = 0;
 	glDeleteBuffers(2, VBO); VBO[0] = VBO[1] = 0;
 	glDeleteTextures(1, &texture); texture = 0;
-	glDeleteProgram(program); program = 0;
 }
 
 void Buttons::reshape()
@@ -214,7 +202,15 @@ void Buttons::draw()
 	if (buttons.empty()) return;
 	assert((int)buttons.size() <= MAX_BUTTONS);
 
+	program.use();
+	glBindVertexArray(VAO[current_buf]);
+	#ifdef LINUX
 	float *data = (float*)glMapNamedBuffer(VBO[current_buf], GL_WRITE_ONLY);
+	#else
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[current_buf]);
+	float *data = (float*)glMapBufferRange(GL_ARRAY_BUFFER, 0, VERTEX_DATA_SIZE, GL_MAP_WRITE_BIT);
+	#endif
+
 	unsigned char *d = (unsigned char*)(data+2*MAX_BUTTONS);
 	for (const auto &b : buttons)
 	{
@@ -230,7 +226,12 @@ void Buttons::draw()
 		*data++ = b.pos.y;
 	}
 	GL_CHECK;
+
+	#ifdef LINUX
 	glUnmapNamedBuffer(VBO[current_buf]);
+	#else
+	glUnmapBuffer(GL_ARRAY_BUFFER);
+	#endif
 
 	// glDepthMask(GL_FALSE); <-- triggers some GPU bug that kills all drawing, no idea why...
 
@@ -238,80 +239,18 @@ void Buttons::draw()
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	glUseProgram(program);
-	glBindVertexArray(VAO[current_buf]);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, texture);
-	glUniform1i(0, 1); // wants the texture unit, not the texture ID!
-	glUniform2f(1, button_size.x, button_size.y);
-	glUniform1i(2, N_IMAGES); // number of buttons in the texture
+	program.uniform(0, 1); // wants the texture unit, not the texture ID!
+	program.uniform(1, button_size.x, button_size.y);
+	program.uniform(2, N_IMAGES); // number of buttons in the texture
 	GL_CHECK;
 
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glDrawArrays(GL_POINTS, 0, (int)buttons.size());
 	GL_CHECK;
 	glBindVertexArray(0); 
-	glUseProgram(0);
+	program.finish();
 
 	++current_buf; current_buf %= 2;
-}
-
-bool Buttons::handle_event(const SDL_Event &e)
-{
-	switch (e.type)
-	{
-		case SDL_MOUSEBUTTONDOWN:
-		{
-			if (e.button.button != SDL_BUTTON_LEFT) return false;
-			for (auto &b : buttons)
-			{
-				if (!b.hit(window, e.button.x, e.button.y)) continue;
-				clicked_button = b.index;
-				return true;
-			}
-			return false;
-		}
-		case SDL_MOUSEBUTTONUP:
-			if (e.button.button != SDL_BUTTON_LEFT) return false;
-			for (auto &b : buttons)
-			{
-				if (clicked_button != b.index) continue;
-				if (!b.hit(window, e.button.x, e.button.y)) continue;
-				window.button_action(b.index);
-				clicked_button = -1;
-				return true;
-			}
-			clicked_button = -1;
-			return false;
-		case SDL_MOUSEMOTION:
-		{
-			return clicked_button >= 0;
-;
-			//auto buttons = e.motion.state;
-			//static int i = 0; ++i; i %=10;
-			//std::cout << i << "B " << buttons << std::endl;
-			//if (!(buttons & (SDL_BUTTON_LMASK|SDL_BUTTON_RMASK|SDL_BUTTON_MMASK))) return true;
-			
-			//double dx = e.motion.xrel, dy = e.motion.yrel, dz = 0.0;
-				//doc.drag(dragging, drag_rel, e.motion.x, e.motion.y, drag_v, dx, dy);
-		}
-
-		case SDL_KEYDOWN:
-		{
-			auto key = e.key.keysym.sym;
-			switch (key)
-			{
-				case SDLK_1: case SDLK_2: case SDLK_3:
-				case SDLK_4: case SDLK_5: case SDLK_6:
-				case SDLK_7: case SDLK_8: case SDLK_9:
-				{
-					int i = key-SDLK_1;
-					if (i < 0 || i >= (int)buttons.size()) return false;
-					window.button_action(buttons[i].index);
-					return true;
-				}
-			}
-		}
-	}
-	return false;
 }

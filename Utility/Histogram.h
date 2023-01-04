@@ -1,5 +1,6 @@
 #pragma once
 #include "GL_Image.h"
+#include <array>
 
 class Histogram
 {
