@@ -13,11 +13,6 @@ double rand11()
 	return r();
 }
 
-Puzzle::Puzzle()
-: N(0), W(0), H(0)
-{
-}
-
 void Puzzle::save(Serializer &s) const
 {
 	s.uint32_(W); s.uint32_(H);

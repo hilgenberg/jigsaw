@@ -1,5 +1,6 @@
 #pragma once
 #include <filesystem>
+#include "GL_Color.h"
 
 /**
  * For getting and setting user preferences.
@@ -36,13 +37,26 @@ namespace Preferences
 	bool flush(); // store changes into registry/ini file
 	bool reset(); // reread from registry/disk
 
-	std::filesystem::path directory();
+	#ifdef LINUX
+		std::filesystem::path directory();
+
+		int  fps();
+		void fps(int value);
+		bool vsync();
+		void vsync(bool value);
+
+		std::string image();
+		void image(const std::string &path);
+
+		int  pieces();
+		void pieces(int n);
+	#endif
 
 	EdgeType edge();
 	void edge(EdgeType value);
 
-	int  fps();
-	void fps(int value);
+	GL_Color bg_color();
+	void bg_color(const GL_Color &value);
 
 	float solution_alpha();
 	void  solution_alpha(float value);
@@ -57,15 +71,6 @@ namespace Preferences
 	ScreenAlign button_align();
 	void  button_align(ScreenAlign value);
 
-	bool vsync();
-	void vsync(bool value);
-
 	bool spiral();
 	void spiral(bool value);
-
-	std::string image();
-	void image(const std::string &path);
-
-	int  pieces();
-	void pieces(int n);
 };

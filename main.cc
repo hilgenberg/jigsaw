@@ -2,6 +2,7 @@
 
 #include <signal.h>
 #include "Window.h"
+#include "Renderer.h"
 #include "Utility/Preferences.h"
 #include "Utility/GL_Util.h"
 #include "GUI.h"
@@ -177,7 +178,8 @@ int main(int argc, char *argv[])
 		if (n > 0) Preferences::pieces(n);
 
 		GL_CHECK;
-		Window w(window, doc);
+		Renderer renderer(doc);
+		Window w(window, doc, renderer);
 		GUI gui(window, gl_context, w);
 		::gui = &gui;
 
@@ -201,13 +203,13 @@ int main(int argc, char *argv[])
 			w.reshape(W, H);
 			GL_CHECK;
 	
-			if (w.animating() || w.needs_redraw() || gui.needs_redraw())
+			if (w.animating() || renderer.wants_redraw() || gui.needs_redraw())
 			{
 				gui.update();
 				GL_CHECK;
 				w.animate();
 				GL_CHECK;
-				w.draw();
+				renderer.draw();
 				GL_CHECK;
 				gui.draw();
 				GL_CHECK;
@@ -215,7 +217,6 @@ int main(int argc, char *argv[])
 			}
 			else
 			{
-				w.waiting();
 				constexpr double SLEEP_MIN = 1.0 / 1000, SLEEP_MAX = 1.0 / 30;
 				double st = SLEEP_MIN;
 				while (!SDL_WaitEventTimeout(NULL, (int)(st*1000)))

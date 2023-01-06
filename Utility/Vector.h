@@ -69,6 +69,7 @@ template<typename T> struct P2
 	inline T    operator *  (const P2 &a) const { return x*a.x + y*a.y; }
 	inline P2   operator +  (const P2 &a) const { return P2(x+a.x, y+a.y); }
 	inline P2   operator -  (const P2 &a) const { return P2(x-a.x, y-a.y); }
+	inline P2   operator -  ()            const { return P2(-x, -y); }
 	inline P2   operator *  (T a)         const { return P2(a*x, a*y); }
 	inline P2   operator /  (T a)         const { return P2(x/a, y/a); }
 

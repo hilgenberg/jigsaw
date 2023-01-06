@@ -1,5 +1,5 @@
 layout(points) in;
-in uint borders_geo[];
+in flat uint borders_geo[];
 in vec2 tex_geo[];
 
 layout(triangle_strip, max_vertices = 4) out;
@@ -29,22 +29,22 @@ void main()
 	border = b;
 	
 	gl_Position = view * (c + vec4(x0*size.x, y0*size.y, 0.0, 0.0));
-	tex_coord   = t + vec2(x0 / count.x, y0 / count.y);
+	tex_coord   = t + vec2(x0 / float(count.x), y0 / float(count.y));
 	orig        = vec2(x0, y0); // position inside the piece (could be computed from tex_coord, but messy)
 	EmitVertex();
 
 	gl_Position = view * (c + vec4(x1*size.x, y0*size.y, 0.0, 0.0));
-	tex_coord   = t + vec2(x1 / count.x, y0 / count.y);
+	tex_coord   = t + vec2(x1 / float(count.x), y0 / float(count.y));
 	orig        = vec2(x1, y0);
 	EmitVertex();
 	
 	gl_Position = view * (c + vec4(x0*size.x, y1*size.y, 0.0, 0.0));
-	tex_coord   = t + vec2(x0 / count.x, y1 / count.y);
+	tex_coord   = t + vec2(x0 / float(count.x), y1 / float(count.y));
 	orig        = vec2(x0, y1);
 	EmitVertex();
 	
 	gl_Position = view * (c + vec4(x1*size.x, y1*size.y, 0.0, 0.0));
-	tex_coord   = t + vec2(x1 / count.x, y1 / count.y);
+	tex_coord   = t + vec2(x1 / float(count.x), y1 / float(count.y));
 	orig        = vec2(x1, y1);
 	EmitVertex();
 	

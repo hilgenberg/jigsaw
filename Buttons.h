@@ -1,10 +1,6 @@
 #pragma once
-#include "Utility/GL_Image.h"
 #include "Utility/Vector.h"
-#ifdef LINUX
-#include <SDL_events.h>
-#endif
-class Window;
+class Camera;
 
 enum ButtonAction
 {
@@ -15,32 +11,18 @@ enum ButtonAction
 	SHOVEL,
 	MAGNET,
 	SETTINGS,
-	N_IMAGES
+	N_BUTTON_IMAGES
 };
 
-class Buttons
+struct Buttons
 {
-public:
-	Buttons(Window &w);
-	~Buttons();
-	void draw();
-	void reshape();
-
-	#ifdef LINUX
-	bool handle_event(const SDL_Event &e);
-	#endif
-	#ifdef ANDROID
-	bool handle_touch(int ds, int n, int *id, float *x, float *y);
-	#endif
-
-private:
-	Window &window;
+	void reshape(Camera &camera);
 
 	struct Button
 	{
-		ButtonAction index; // index into button texture
-		P2f pos; // center position
-		bool hit(const Window &w, int mx, int my) const;
+		ButtonAction index;
+		P2f          pos; // position of center
 	};
 	std::vector<Button> buttons;
+	P3f button_size {0, 0, 0}; // (w,h,spacing)
 };

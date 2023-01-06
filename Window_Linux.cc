@@ -9,22 +9,24 @@
 #include "Utility/Timer.h"
 #include "Utility/Preferences.h"
 #include "Victory.h"
+#include "Puzzle_Tools.h"
+#include "Buttons.h"
 #include <SDL.h>
 extern volatile bool quit;
 extern void toggle_gui();
 
 static inline double absmax(double a, double b){ return fabs(a) > fabs(b) ? a : b; }
 
-Window::Window(SDL_Window* window, Document &doc)
+Window::Window(SDL_Window* window, Document &doc, Renderer &renderer)
 : window(window)
 , doc(doc)
-, buttons(*this)
+, renderer(renderer)
 {
 }
 
 bool Window::handle_event(const SDL_Event &e)
 {
-	if (buttons.handle_event(e)) return true;
+	if (handle_button_event(e)) return true;
 
 	switch (e.type)
 	{
@@ -54,7 +56,7 @@ bool Window::handle_event(const SDL_Event &e)
 			bool ctrl    = (m & (KMOD_LCTRL|KMOD_RCTRL));
 			bool alt     = (m & (KMOD_LALT|KMOD_RALT));
 
-			Tool t = tool;
+			Tool t = doc.tool;
 			if (t == Tool::NONE)
 			{
 				if (alt && !shift && !ctrl) t = Tool::SHOVEL;
@@ -67,15 +69,15 @@ bool Window::handle_event(const SDL_Event &e)
 					break;
 				case Tool::HIDE:
 				{
-					int d = doc.hit_test(ScreenCoords(e.button.x, e.button.y), false, drag_rel);
+					int d = hit_test(ScreenCoords(e.button.x, e.button.y), false);
 					if (d < 0) break;
-					doc.hide(d, alt||shift);
+					hide_tool(doc.puzzle, d, alt||shift);
 					start_animations();
 					dragging = -2;
 					break;
 				}
 				case Tool::MAGNET:
-					dragging = doc.hit_test(ScreenCoords(e.button.x, e.button.y), true, drag_rel);
+					dragging = hit_test(ScreenCoords(e.button.x, e.button.y), true);
 					if (dragging < 0) break;
 					magnetized.insert(dragging);
 					if (doc.puzzle.g[dragging] >= 0)
@@ -86,7 +88,7 @@ bool Window::handle_event(const SDL_Event &e)
 					redraw();
 					break;
 				case Tool::NONE:
-					dragging = doc.hit_test(ScreenCoords(e.button.x, e.button.y), true, drag_rel);
+					dragging = hit_test(ScreenCoords(e.button.x, e.button.y), true);
 					if (dragging < 0) break;
 					redraw();
 					break;
@@ -97,8 +99,7 @@ bool Window::handle_event(const SDL_Event &e)
 			if (va || e.button.button != SDL_BUTTON_LEFT) return true;
 			if (dragging >= 0)
 			{
-				bool c = doc.drop(dragging, magnetized);
-				if (c)
+				if (drag_tool_drop(doc.puzzle, doc.camera, dragging, magnetized))
 				{
 					play_click();
 					if (doc.puzzle.solved() && !va)
@@ -124,7 +125,7 @@ bool Window::handle_event(const SDL_Event &e)
 			double dx = e.motion.xrel, dy = e.motion.yrel, dz = 0.0;
 			if (dragging >= 0)
 			{
-				doc.drag(dragging, magnetized, drag_rel, ScreenCoords(e.motion.x, e.motion.y), drag_v, dx, dy);
+				drag_tool(doc.puzzle, doc.camera, dragging, magnetized, drag_rel, ScreenCoords(e.motion.x, e.motion.y), drag_v, dx, dy);
 				if (drag_v.absq() > 1e-12) start_animations();
 				redraw();
 				return true;
@@ -137,9 +138,9 @@ bool Window::handle_event(const SDL_Event &e)
 
 			drag_v.clear();
 
-			if (tool == Tool::SHOVEL || (alt && !ctrl && !shift))
+			if (doc.tool == Tool::SHOVEL || (alt && !ctrl && !shift))
 			{
-				doc.shovel(ScreenCoords(e.motion.x, e.motion.y), ScreenCoords(dx, dy));
+				shovel_tool(doc.puzzle, doc.camera, ScreenCoords(e.motion.x, e.motion.y), ScreenCoords(dx, dy));
 				redraw();
 				return true;
 			}
@@ -180,7 +181,7 @@ bool Window::handle_event(const SDL_Event &e)
 				redraw();
 
 				if (dragging >= 0)
-					doc.drag(dragging, magnetized, drag_rel, ScreenCoords(mx, my), drag_v);
+					drag_tool(doc.puzzle, doc.camera, dragging, magnetized, drag_rel, ScreenCoords(mx, my), drag_v);
 			}
 			else
 			{
@@ -217,13 +218,13 @@ bool Window::handle_key(SDL_Keysym keysym, bool release)
 			return true;
 
 		case SDLK_SPACE:
-			if (ctrl) doc.arrange(false);
-			else doc.reset_view();
+			if (ctrl) arrange(doc.puzzle, false);
+			else reset_view(doc.puzzle, doc.camera);
 			redraw();
 			start_animations();
 			return true;
 		case SDLK_e:
-			doc.arrange(true);
+			arrange(doc.puzzle, true);
 			redraw();
 			start_animations();
 			return true;
@@ -244,6 +245,56 @@ bool Window::handle_key(SDL_Keysym keysym, bool release)
 		case SDLK_PLUS: case SDLK_MINUS:
 			ikeys.erase(key);
 			return true;
+	}
+	return false;
+}
+
+bool Window::handle_button_event(const SDL_Event &e)
+{
+	switch (e.type)
+	{
+		case SDL_MOUSEBUTTONDOWN:
+		{
+			if (e.button.button != SDL_BUTTON_LEFT) return false;
+			for (auto &b : doc.buttons.buttons)
+			{
+				if (!button_hit(b, e.button.x, e.button.y)) continue;
+				clicked_button = b.index;
+				return true;
+			}
+			return false;
+		}
+		case SDL_MOUSEBUTTONUP:
+			if (e.button.button != SDL_BUTTON_LEFT) return false;
+			for (auto &b : doc.buttons.buttons)
+			{
+				if (clicked_button != b.index) continue;
+				if (!button_hit(b, e.button.x, e.button.y)) continue;
+				button_action(b.index);
+				clicked_button = -1;
+				return true;
+			}
+			clicked_button = -1;
+			return false;
+		case SDL_MOUSEMOTION:
+			return clicked_button >= 0;
+
+		case SDL_KEYDOWN:
+		{
+			auto key = e.key.keysym.sym;
+			switch (key)
+			{
+				case SDLK_1: case SDLK_2: case SDLK_3:
+				case SDLK_4: case SDLK_5: case SDLK_6:
+				case SDLK_7: case SDLK_8: case SDLK_9:
+				{
+					int i = key-SDLK_1;
+					if (i < 0 || i >= (int)doc.buttons.buttons.size()) return false;
+					button_action(doc.buttons.buttons[i].index);
+					return true;
+				}
+			}
+		}
 	}
 	return false;
 }

@@ -1,5 +1,11 @@
-#include "Document.h"
-#include "Utility/Histogram.h"
+#include "Puzzle_Tools.h"
+#include "ImagePuzzle.h"
+#include "Camera.h"
+#include "Utility/Preferences.h"
+
+//-----------------------------------------------------------------------------
+// Hide Tool
+//-----------------------------------------------------------------------------
 
 static void hide(Puzzle &puzzle, Puzzle::Piece piece)
 {
@@ -18,32 +24,28 @@ static void hide(Puzzle &puzzle, Puzzle::Piece piece)
 	puzzle.move(piece, q, true);
 }
 
-void Document::hide(Puzzle::Piece piece, bool and_similar)
+void hide_tool(ImagePuzzle &puzzle, Puzzle::Piece piece, bool and_similar)
 {
 	if (piece < 0 || piece >= puzzle.N) return;
-	if (and_similar)
-	{
-		if (!histo) histo.reset(new Histogram(im, puzzle.W, puzzle.H));
-		for (int i = 0; i < puzzle.N; ++i)
-		{
-			if (!puzzle.should_arrange(i)) continue;
-			//if (histo->distance(piece, i) < 0.2) ::hide(puzzle, i);
-			if (histo->similarity(piece, i) > 0.7) ::hide(puzzle, i);
-		}
-	}
-	else
+	if (!and_similar)
 	{
 		::hide(puzzle, piece);
+		return;
+	}
+	auto &histo = puzzle.histogram();
+	for (int i = 0; i < puzzle.N; ++i)
+	{
+		if (!puzzle.should_arrange(i)) continue;
+		//if (histo.distance(piece, i) < 0.2) ::hide(puzzle, i);
+		if (histo.similarity(piece, i) > 0.7) ::hide(puzzle, i);
 	}
 }
 
-int Document::hit_test(const ScreenCoords &p, bool pick_up, PuzzleCoords &rel)
-{
-	Puzzle::Piece i = puzzle.hit_test(puzzle.from_camera(camera.from_screen(p)), rel);
-	if (pick_up && i >= 0) puzzle.pick_up(i);
-	return i;
-}
-void Document::drag(Puzzle::Piece piece, std::set<Puzzle::Piece> &magnet, const PuzzleCoords &rel, const ScreenCoords &p, P2d &v, double mdx, double mdy)
+//-----------------------------------------------------------------------------
+// Drag/Magnet Tool
+//-----------------------------------------------------------------------------
+
+void drag_tool(Puzzle &puzzle, Camera &camera, Puzzle::Piece piece, std::set<Puzzle::Piece> &magnet, const PuzzleCoords &rel, const ScreenCoords &p, P2d &v, double mdx, double mdy)
 {
 	int w = camera.screen_w(), h = camera.screen_h();
 	int pn = std::min(w, h) / 10; // size of border that causes scrolling
@@ -70,14 +72,18 @@ void Document::drag(Puzzle::Piece piece, std::set<Puzzle::Piece> &magnet, const 
 		puzzle.magnetize(magnet, delta);
 	}
 }
-bool Document::drop(Puzzle::Piece piece, std::set<Puzzle::Piece> &magnet)
+bool drag_tool_drop(Puzzle &puzzle, Camera &camera, Puzzle::Piece piece, std::set<Puzzle::Piece> &magnet)
 {
 	if (piece < 0 || piece >= puzzle.N) return false;
 	auto delta = std::max(5.0*camera.pixel_size(), 0.3);
 	return magnet.empty() ? puzzle.connect(piece, delta) : puzzle.connect(magnet, delta);
 }
 
-void Document::shovel(const ScreenCoords &dst, const ScreenCoords &delta)
+//-----------------------------------------------------------------------------
+// Shovel Tool
+//-----------------------------------------------------------------------------
+
+void shovel_tool(Puzzle &puzzle, Camera &camera, const ScreenCoords &dst, const ScreenCoords &delta)
 {
 	CameraCoords c = camera.from_screen(dst), v = camera.dconvert(delta), v0 = v;
 	v0.to_unit();
@@ -91,7 +97,7 @@ void Document::shovel(const ScreenCoords &dst, const ScreenCoords &delta)
 		if ((p-c).absq() > r*r) continue;
 		P.push_back(i);
 	}
-	std::sort(P.begin(), P.end(), [this, &v0, &c, r](int a, int b)
+	std::sort(P.begin(), P.end(), [&puzzle, &v0, &c, r](int a, int b)
 	{
 		CameraCoords p1 = puzzle.to_camera(puzzle.pos[a]);
 		CameraCoords p2 = puzzle.to_camera(puzzle.pos[b]);

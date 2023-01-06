@@ -2,9 +2,6 @@
 #include "Vector.h"
 #include "GL_Util.h"
 
-GL_Program::GL_Program()
-{}
-
 GL_Program::~GL_Program()
 {
 	if (program) glDeleteProgram(program);
@@ -40,8 +37,7 @@ void GL_Program::add_shaders(const char *vertex, const char *geometry, const cha
 static GLuint compileShader(const std::string &src, GLuint type)
 {
 	#ifdef DEBUG
-	std::cout << "Compiling shader " << type << ":\n----------------------------------------\n" <<
-		src << std::endl;
+	//LOG_DEBUG("Compiling shader %d:\n----------------------------------------\n%s", type, src.c_str());
 	#endif
 
 	GLuint shader = glCreateShader(type);
@@ -75,6 +71,10 @@ void GL_Program::use(int i)
 
 		std::string preamble(glsl_version);
 		preamble += "\n";
+		#ifdef ANDROID
+		preamble += "precision mediump float;\n";
+		#endif
+
 		for (int i = 0; i < (int)uniform_names.size(); ++i)
 		{
 			preamble += format(

@@ -1,4 +1,6 @@
-#include "Document.h"
+#include "Puzzle_Tools.h"
+#include "Puzzle.h"
+#include "Camera.h"
 #include "Utility/Preferences.h"
 
 static inline bool even(int i) { return !(i&1); }
@@ -36,7 +38,7 @@ static void move(Puzzle &puzzle, Puzzle::Piece i, double x, double y, bool anim,
 	if (y < y0) y0 = y; if (y+puzzle.sy > y1) y1 = y+puzzle.sy;
 }
 
-void Document::arrange(bool edge)
+void arrange(Puzzle &puzzle, bool edge)
 {
 	const int W = puzzle.W, H = puzzle.H;
 	if (W < 2 || H < 2 || Preferences::edge() == None) edge = false;

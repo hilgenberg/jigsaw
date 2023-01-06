@@ -2,8 +2,8 @@ layout(location = 0) in vec2  pos;
 layout(location = 1) in uint  index;
 layout(location = 2) in uint  actv; // "active" is a reserved word
 
-out uint  index_geo;
-out uint  active_geo;
+out flat uint index_geo;
+out flat uint active_geo;
 
 void main()
 {

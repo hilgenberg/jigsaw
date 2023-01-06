@@ -8,10 +8,10 @@ float dq(vec2 v, float r) { return dot(v,v) - r*r; }
 
 void main()
 {
-	const float bl = tx(border); // +1 if knob comes out, -1 if knob goes in
-	const float br = tx(border>>2);
-	const float bt = tx(border>>4);
-	const float bb = tx(border>>6);
+	float bl = tx(border); // +1 if knob comes out, -1 if knob goes in
+	float br = tx(border>>2);
+	float bt = tx(border>>4);
+	float bb = tx(border>>6);
 
 	// R is radius of big circle
 	// r is radius of small circle

@@ -1,67 +1,39 @@
 #pragma once
 #include "Document.h"
-#include "Buttons.h"
-#include "Utility/FPSCounter.h"
 #include "Victory.h"
+class Renderer;
 #ifdef LINUX
 #include <SDL_events.h>
 #endif
-
-enum class Tool
-{
-	NONE,
-	HIDE,
-	SHOVEL,
-	MAGNET
-};
 
 class Window 
 {
 public:
 	#ifdef LINUX
-	Window(SDL_Window* window, Document &doc);
+	Window(SDL_Window* window, Document &doc, Renderer &renderer);
 	bool handle_event(const SDL_Event &event);
 	bool handle_key(SDL_Keysym key, bool release);
+	bool handle_button_event(const SDL_Event &event);
 	#endif
 
 	#ifdef ANDROID
-	Window(Document &doc);
-	~Window();
-
-	// ds ==  1: touch down
-	// ds == -1: touch lifted
-	// ds ==  0: movement
-	// special case ds == -1, n == 0: lift all, cancel gesture
+	Window(Document &doc, Renderer &renderer);
+	// ds is  1: touch down, -1: touch lifted, 0: movement
+	// special case ds == -1, n == 0: lift all / cancel gesture
 	void handle_touch(int ds, int n, int *id, float *x, float *y);
 	#endif
 
-	bool needs_redraw() const{ return need_redraw; }
+	void redraw();
 	bool animating() const{ return tnf > 0.0; }
-	int  current_fps() const;
-
 	void animate();
-	void draw();
-	void waiting() { fps.pause(); }
-	void redraw(){ need_redraw = true; }
-
 	void reshape(int w, int h);
-	
-	P2<int> size() const { return P2<int>(w,h); }
-	Tool active_tool() const { return tool; }
 
 private:
-	friend class Buttons;
-	void button_action(ButtonAction a);
-
 	Document   &doc;
-	Buttons     buttons;
-	int         w = 0, h = 0;
-	Tool        tool = Tool::NONE;
+	Renderer   &renderer; // just needed for calling redraw() on it
 
 	double      tnf = -1.0;        // scheduled time for next frame
 	double      last_frame = -1.0; // time of last animate() call
-	FPSCounter  fps;
-	bool        need_redraw = true;
 
 	Puzzle::Piece dragging = -1;
 	P2d           drag_v {0.0, 0.0}; // move camera while dragging piece to the edge?
@@ -70,17 +42,21 @@ private:
 
 	std::unique_ptr<VictoryAnimation> va;
 	void start_animations();
+	int  hit_test(const ScreenCoords &p, bool pick_up);
+	void button_action(ButtonAction a);
+	bool button_hit(const Buttons::Button &b, float mx, float my);
 
 	#ifdef LINUX
 	friend class GUI;
 	SDL_Window *window;
 	std::map<SDL_Keycode, double> ikeys; // pressed key -> inertia
+	int clicked_button = -1;
 	#endif
 
 	#ifdef ANDROID
-	const EGLContext context;
 	std::map<int, ScreenCoords> pointer_state;
 	int drag_pointer_id = -1;
+	int clicked_button = -1, button_pointer_id = -1;
 	#endif
 };
 

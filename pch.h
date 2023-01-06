@@ -43,6 +43,7 @@
 #endif
 
 #include "Utility/StringFormatting.h"
+#include "Utility/Logging.h"
 
 using std::isnan;
 using std::isinf;

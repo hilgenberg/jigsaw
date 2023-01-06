@@ -4,6 +4,7 @@
 #include <map>
 #include <iostream>
 #include <cstring>
+#include "GL_Util.h"
 
 //----------------------------------------------------------------------------------------------------------------------
 // GL_Image
@@ -19,7 +20,7 @@ bool GL_Image::load(const std::string &path)
 	unsigned char *d1 = stbi_load(path.c_str(), &x, &y, &n, 4);
 	if (!d1)
 	{
-		fprintf(stderr, "Error loading %s: %s\n", path.c_str(), stbi_failure_reason());
+		LOG_ERROR("Error loading %s: %s", path.c_str(), stbi_failure_reason());
 		return false;
 	}
 	if (x <= 0 || y <= 0 || n <= 0)

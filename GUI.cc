@@ -110,20 +110,20 @@ void GUI::update()
 	if (f != f0)
 	{
 		Preferences::button_scale(f);
-		w.buttons.reshape();
+		w.doc.buttons.reshape(w.doc.camera);
 	}
 	
 	static const char *button_edges[] = {"Left", "Right", "Top", "Bottom"};
 	i = i0 = Preferences::button_edge();
 	ImGui::Combo("##Button Placement", &i, button_edges, 4);
-	if (i != i0) { Preferences::button_edge((ScreenEdge)i); w.buttons.reshape(); }
+	if (i != i0) { Preferences::button_edge((ScreenEdge)i); w.doc.buttons.reshape(w.doc.camera); }
 	bool button_v = (i == LEFT || i == RIGHT);
 	
 	static const char *button_align_h[] = {"Left", "Center", "Right"};
 	static const char *button_align_v[] = {"Top", "Center", "Bottom"};
 	i = i0 = Preferences::button_align();
 	ImGui::Combo("##Button Alignment", &i, button_v ? button_align_v : button_align_h, 3);
-	if (i != i0) { Preferences::button_align((ScreenAlign)i); w.buttons.reshape(); }
+	if (i != i0) { Preferences::button_align((ScreenAlign)i); w.doc.buttons.reshape(w.doc.camera); }
 
 	ImGui::Spacing();
 	ImGui::Spacing();
@@ -142,7 +142,6 @@ void GUI::update()
 		SDL_GL_SetSwapInterval(b);
 		Preferences::vsync(b); redraw();
 	}
-	int fps = w.current_fps(); if (fps > 0) ImGui::Text("FPS = %d", fps);
 	ImGui::PopItemWidth();
 	ImGui::End();
 

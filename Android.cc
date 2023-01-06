@@ -1,0 +1,67 @@
+#ifdef ANDROID
+#include "Renderer.h"
+#include "Document.h"
+#include "Window.h"
+#include <jni.h>
+
+//-------------------------------------------------------------------------------------------------------
+// Exports
+//-------------------------------------------------------------------------------------------------------
+
+static Renderer *renderer = NULL;
+static Window   *window = NULL;
+static Document  doc;
+
+extern "C" {
+#define F(ret, name)       JNIEXPORT ret JNICALL Java_com_hilgenberg_jigsaw_PuzzleView_ ## name (JNIEnv *env, jclass obj)
+#define FF(ret, name, ...) JNIEXPORT ret JNICALL Java_com_hilgenberg_jigsaw_PuzzleView_ ## name (JNIEnv *env, jclass obj, __VA_ARGS__)
+
+F(void, reinit)
+{
+	delete renderer; renderer = NULL;
+	delete window;   window   = NULL;
+	bool ok = doc.load("/storage/self/primary/Pictures/Telegram/IMG_20230104_173017_152.jpg", 100);
+	assert(ok);
+	try { renderer = new Renderer(doc); } catch (...) { return; }
+	try { window = new Window(doc, *renderer); } catch (...) { delete renderer; renderer = NULL; }
+}
+
+FF(void, resize, jint w, jint h)
+{
+	if (!renderer) return;
+	window->reshape(w, h);
+}
+
+F(jboolean, draw)
+{
+	if (!renderer) return false;
+	window->animate();
+	renderer->draw();
+	return window->animating();
+}
+
+FF(void, touch_1uni, jint ds, jint id, jfloat x, jfloat y)
+{
+	if (window) window->handle_touch(ds, 1, &id, &x, &y);
+}
+
+FF(void, touch_1multi, jint ds, jintArray id_, jfloatArray x_, jfloatArray y_)
+{
+	if (!window) return;
+
+	int n = env->GetArrayLength(x_);
+	assert(n == env->GetArrayLength(y_));
+	assert(n == env->GetArrayLength(id_));
+	jfloat *x = env->GetFloatArrayElements(x_, NULL);
+	jfloat *y = env->GetFloatArrayElements(y_, NULL);
+	jint  *id = env->GetIntArrayElements (id_, NULL);
+	try { window->handle_touch(ds, n, id, x, y); } catch (...) {}
+	env->ReleaseFloatArrayElements(x_, x, JNI_ABORT);
+	env->ReleaseFloatArrayElements(y_, y, JNI_ABORT);
+	env->ReleaseIntArrayElements(id_, id, JNI_ABORT);
+}
+
+};
+
+
+#endif

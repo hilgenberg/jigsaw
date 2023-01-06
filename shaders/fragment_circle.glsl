@@ -9,13 +9,13 @@ float tx(uint b) { return float(b & uint(1))-float((b>>1) & uint(1)); }
 
 void main()
 {
-	const float bl = tx(border); // +1 if knob comes out, -1 if knob goes in
-	const float br = tx(border>>2);
-	const float bt = tx(border>>4);
-	const float bb = tx(border>>6);
+	float bl = tx(border); // +1 if knob comes out, -1 if knob goes in
+	float br = tx(border>>2);
+	float bt = tx(border>>4);
+	float bb = tx(border>>6);
 
 	const float r = 0.2;
-	const float x = abs(orig.x-0.5), y = abs(orig.y-0.5);
+	float x = abs(orig.x-0.5), y = abs(orig.y-0.5);
 
 	if (bt*orig.y < 0.0 && bt*length(vec2(x,     orig.y)) > bt*r) discard;
 	if (bb*orig.y > bb  && bb*length(vec2(x, 1.0-orig.y)) > bb*r) discard;

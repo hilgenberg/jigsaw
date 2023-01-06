@@ -16,7 +16,7 @@ public:
 	void save(Serializer &s) const;
 	void load(Deserializer &s);
 
-	void viewport(int w, int h); // set view port size in pixels
+	void viewport(int w, int h); // set viewport size in pixels
 	M4d  matrix(int antialias_pass = 0, int num_passes = 1) const;
 
 	int  screen_w() const{ return w; }
@@ -42,13 +42,13 @@ public:
 			2.0 * range.y * d.y / (h-1));
 	}
 
-	void reset();
 	void zoom(double f);
 	void zoom(double f, const ScreenCoords &center);
 	void move(const CameraCoords &d) { center += d; }
 
 	void view_box(double x0, double x1, double y0, double y1, double factor = 1.0)
 	{
+		LOG_DEBUG("Box %f %f %f %f - %f", x0, x1, y0, y1, factor);
 		center.set((x0+x1)*0.5, (y0+y1)*0.5);
 	#if 0
 		// this makes it fit, no matter how the window gets resized:

@@ -8,12 +8,16 @@
 #include "Utility/Timer.h"
 #include "Utility/Preferences.h"
 #include "Victory.h"
+#include "Puzzle_Tools.h"
+#include "Renderer.h"
 
 #ifdef LINUX
 extern volatile bool quit;
 extern void toggle_gui();
 static inline double absmax(double a, double b){ return fabs(a) > fabs(b) ? a : b; }
 #endif
+
+void Window::redraw() { renderer.redraw(); }
 
 void Window::start_animations() { if (tnf <= 0.0) last_frame = tnf = now(); }
 
@@ -29,10 +33,11 @@ void Window::animate()
 		t = now();
 		if (quit) return;
 	}
-	#endif
-
 	int fps = Preferences::fps();
 	tnf = (fps <= 0) ? t : t + 0.99 / fps;
+	#else
+	tnf = t;
+	#endif
 
 	double dt = std::min(std::max(1e-42, t - last_frame), 0.25);
 	last_frame = t;
@@ -98,7 +103,7 @@ void Window::animate()
 		PuzzleCoords rel_tmp = drag_rel;
 		P2d v_tmp = drag_v;
 		//int mx = -1, my = -1; SDL_GetMouseState(&mx, &my);
-		doc.drag(dragging, magnetized, rel_tmp, dp0, v_tmp);
+		drag_tool(doc.puzzle, doc.camera, dragging, magnetized, rel_tmp, dp0, v_tmp);
 	}
 
 	doc.puzzle.animate(dt);
@@ -107,7 +112,7 @@ void Window::animate()
 		#ifdef LINUX
 		ikeys.empty() && 
 		#endif
-		(dragging < 0 || drag_v.absq() < 1e-12) && doc.puzzle.animations.empty())
+		(dragging < 0 || drag_v.absq() < 1e-12) && !doc.animating())
 	{
 		tnf = -1.0;
 		return;
@@ -118,42 +123,43 @@ void Window::button_action(ButtonAction a)
 {
 	switch (a)
 	{
-		case ARRANGE:      doc.arrange(false); start_animations(); break;
-		case EDGE_ARRANGE: doc.arrange(true);  start_animations(); break;
-		case RESET_VIEW:   doc.reset_view(); break;
+		case ARRANGE:      arrange(doc.puzzle, false); start_animations(); break;
+		case EDGE_ARRANGE: arrange(doc.puzzle, true);  start_animations(); break;
+		case RESET_VIEW:   reset_view(doc.puzzle, doc.camera); break;
 		case SETTINGS:
 			#ifdef LINUX
 			toggle_gui();
 			#endif
 			break;
-		case HIDE:   tool = (tool==Tool::HIDE   ? Tool::NONE : Tool::HIDE);   break;
-		case SHOVEL: tool = (tool==Tool::SHOVEL ? Tool::NONE : Tool::SHOVEL); break;
-		case MAGNET: tool = (tool==Tool::MAGNET ? Tool::NONE : Tool::MAGNET); break;
+		case HIDE:   doc.tool = (doc.tool==Tool::HIDE   ? Tool::NONE : Tool::HIDE);   break;
+		case SHOVEL: doc.tool = (doc.tool==Tool::SHOVEL ? Tool::NONE : Tool::SHOVEL); break;
+		case MAGNET: doc.tool = (doc.tool==Tool::MAGNET ? Tool::NONE : Tool::MAGNET); break;
 		default: return;
 	}
 	redraw();
 }
 
-void Window::reshape(int w_, int h_)
+void Window::reshape(int w, int h)
 {
-	if (w == w_ && h == h_) return;
-	w = w_; h = h_;
-	buttons.reshape();
-	if (w <= 0 || h <= 0) return;
-	glViewport(0, 0, w, h);
+	auto &c = doc.camera;
+	if (w == c.screen_w() && h == c.screen_h()) return;
 	doc.camera.viewport(w, h);
+	doc.buttons.reshape(doc.camera);
 	redraw();
 }
 
-void Window::draw()
+int Window::hit_test(const ScreenCoords &p, bool pick_up)
 {
-	need_redraw = false;
-	fps.frame();
-	doc.draw();
-	buttons.draw();
+	Puzzle::Piece i = doc.puzzle.hit_test(doc.puzzle.from_camera(doc.camera.from_screen(p)), drag_rel);
+	if (pick_up && i >= 0) doc.puzzle.pick_up(i);
+	return i;
 }
 
-int Window::current_fps() const
+bool Window::button_hit(const Buttons::Button &b, float mx, float my)
 {
-	return animating() ? (int)std::round(fps.fps()) : -1;
+	auto &camera = doc.camera;
+	int w = camera.screen_w(), h = camera.screen_h();
+	float x = 2.0f*mx / w - 1.0f, y = 1.0f - 2.0f*my / h;
+	return fabs(x - b.pos.x) < doc.buttons.button_size.x*0.5f &&
+	       fabs(y - b.pos.y) < doc.buttons.button_size.y*0.5f;
 }
