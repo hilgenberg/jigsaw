@@ -16,14 +16,26 @@ extern "C" {
 #define F(ret, name)       JNIEXPORT ret JNICALL Java_com_hilgenberg_jigsaw_PuzzleView_ ## name (JNIEnv *env, jclass obj)
 #define FF(ret, name, ...) JNIEXPORT ret JNICALL Java_com_hilgenberg_jigsaw_PuzzleView_ ## name (JNIEnv *env, jclass obj, __VA_ARGS__)
 
-F(void, reinit)
+FF(void, reinit, jstring path)
 {
+	const char *s = env->GetStringUTFChars(path, NULL);
+	Preferences::directory(std::string(s, env->GetStringUTFLength(path)));
+	env->ReleaseStringUTFChars(path, s);
+
 	delete renderer; renderer = NULL;
 	delete window;   window   = NULL;
-	bool ok = doc.load("/storage/self/primary/Pictures/Telegram/IMG_20230104_173017_152.jpg", 100);
-	assert(ok);
+	if (!Preferences::load_state(doc))
+	{
+		bool ok = doc.load("/storage/self/primary/Pictures/Telegram/IMG_20230104_173017_152.jpg", 100);
+		assert(ok);
+	}
 	try { renderer = new Renderer(doc); } catch (...) { return; }
 	try { window = new Window(doc, *renderer); } catch (...) { delete renderer; renderer = NULL; }
+}
+F(void, save)
+{
+	Preferences::flush();
+	Preferences::save_state(doc);
 }
 
 FF(void, resize, jint w, jint h)

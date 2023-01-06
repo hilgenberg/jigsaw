@@ -45,6 +45,7 @@ private:
 	int  hit_test(const ScreenCoords &p, bool pick_up);
 	void button_action(ButtonAction a);
 	bool button_hit(const Buttons::Button &b, float mx, float my);
+	void drop(); // release dragged piece(s)
 
 	#ifdef LINUX
 	friend class GUI;
@@ -55,8 +56,7 @@ private:
 
 	#ifdef ANDROID
 	std::map<int, ScreenCoords> pointer_state;
-	int drag_pointer_id = -1;
-	int clicked_button = -1, button_pointer_id = -1;
+	int clicked_button = -1;
 	#endif
 };
 

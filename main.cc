@@ -24,34 +24,6 @@ static int usage(const char *arg0)
 	return 1;
 }
 
-static bool save(Document &doc)
-{
-	std::filesystem::path p = Preferences::directory();
-	if (!is_directory(p)) return false;
-	p /= "state";
-
-	FILE *F = fopen(p.c_str(), "w");
-	if (!F)
-	{
-		fprintf(stderr, "cannot write to savegame file %s!\n", p.c_str());
-		return false;
-	}
-
-	try
-	{
-		FileWriter fw(F);
-		Serializer s(fw);
-		doc.save(s);
-	}
-	catch (...)
-	{
-		fclose(F);
-		return false;
-	}
-	fclose(F);
-	return true;
-}
-
 GUI *gui = NULL;
 void toggle_gui()
 {
@@ -156,23 +128,8 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			std::filesystem::path p = Preferences::directory(); p /= "state";
-			if (!is_regular_file(p)) throw std::runtime_error("No savegame found. Please call with arguments!");
-			FILE *F = fopen(p.c_str(), "r");
-			if (!F) throw std::runtime_error("No savegame found.");
-			try
-			{
-				FileReader fr(F);
-				Deserializer s(fr);
-				doc.load(s);
-				assert(s.done());
-			}
-			catch (...)
-			{
-				fclose(F);
-				throw std::runtime_error("Error reading savegame!");
-			}
-			fclose(F);
+			if (!Preferences::load_state(doc))
+ 				throw std::runtime_error("No valid savegame found. Please call with arguments!");
 		}
 
 		if (n > 0) Preferences::pieces(n);
@@ -241,7 +198,7 @@ int main(int argc, char *argv[])
 	
 	if (retcode == 0)
 	{
-		save(doc);
+		Preferences::save_state(doc);
 		Preferences::flush();
 	}
 

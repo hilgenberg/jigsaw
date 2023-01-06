@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
 #include "GL_Color.h"
+struct Document;
 
 /**
  * For getting and setting user preferences.
@@ -37,40 +38,33 @@ namespace Preferences
 	bool flush(); // store changes into registry/ini file
 	bool reset(); // reread from registry/disk
 
-	#ifdef LINUX
-		std::filesystem::path directory();
+	bool save_state(const Document &doc);
+	bool load_state(      Document &doc);
 
-		int  fps();
-		void fps(int value);
-		bool vsync();
-		void vsync(bool value);
-
-		std::string image();
-		void image(const std::string &path);
-
-		int  pieces();
-		void pieces(int n);
+	std::filesystem::path directory();
+	#ifdef ANDROID
+	void directory(const std::string &data_dir);
 	#endif
 
-	EdgeType edge();
-	void edge(EdgeType value);
-
-	GL_Color bg_color();
-	void bg_color(const GL_Color &value);
-
-	float solution_alpha();
-	void  solution_alpha(float value);
-
-	bool absolute_mode();
-	void absolute_mode(bool value);
-
-	float button_scale();
-	void  button_scale(float value);
-	ScreenEdge button_edge();
-	void  button_edge(ScreenEdge value);
-	ScreenAlign button_align();
-	void  button_align(ScreenAlign value);
-
-	bool spiral();
-	void spiral(bool value);
+	#define PREFV(type, name) type name(); void name(type value)
+	#define PREFR(type, name) type name(); void name(const type &value)
+	
+	#ifdef LINUX
+	PREFV(int,         fps);
+	PREFV(bool,        vsync);
+	PREFR(std::string, image);
+	PREFV(int,         pieces);
+	#endif
+	
+	PREFV(EdgeType,    edge);
+	PREFR(GL_Color,    bg_color);
+	PREFV(float,       solution_alpha);
+	PREFV(bool,        absolute_mode);
+	PREFV(float,       button_scale);
+	PREFV(ScreenEdge,  button_edge);
+	PREFV(ScreenAlign, button_align);
+	PREFV(bool,        spiral);
+	
+	#undef PREFV
+	#undef PREFR
 };

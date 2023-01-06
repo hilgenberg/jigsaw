@@ -86,6 +86,7 @@ bool drag_tool_drop(Puzzle &puzzle, Camera &camera, Puzzle::Piece piece, std::se
 void shovel_tool(Puzzle &puzzle, Camera &camera, const ScreenCoords &dst, const ScreenCoords &delta)
 {
 	CameraCoords c = camera.from_screen(dst), v = camera.dconvert(delta), v0 = v;
+	if (v.absq() < 1e-18) return;
 	v0.to_unit();
 	double r = camera.R * 0.25;
 

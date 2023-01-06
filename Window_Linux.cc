@@ -97,21 +97,7 @@ bool Window::handle_event(const SDL_Event &e)
 		}
 		case SDL_MOUSEBUTTONUP:
 			if (va || e.button.button != SDL_BUTTON_LEFT) return true;
-			if (dragging >= 0)
-			{
-				if (drag_tool_drop(doc.puzzle, doc.camera, dragging, magnetized))
-				{
-					play_click();
-					if (doc.puzzle.solved() && !va)
-					{
-						va.reset(new VictoryAnimation(doc.puzzle, doc.camera));
-						start_animations();
-					}
-				}
-			}
-			dragging = -1; drag_v.clear();
-			magnetized.clear();
-			redraw();
+			drop();
 			return true;
 		case SDL_MOUSEMOTION:
 		{

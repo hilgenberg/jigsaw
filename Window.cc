@@ -163,3 +163,21 @@ bool Window::button_hit(const Buttons::Button &b, float mx, float my)
 	return fabs(x - b.pos.x) < doc.buttons.button_size.x*0.5f &&
 	       fabs(y - b.pos.y) < doc.buttons.button_size.y*0.5f;
 }
+
+void Window::drop()
+{
+	if (dragging < 0) return;
+	if (drag_tool_drop(doc.puzzle, doc.camera, dragging, magnetized))
+	{
+		play_click();
+		if (doc.puzzle.solved() && !va)
+		{
+			va.reset(new VictoryAnimation(doc.puzzle, doc.camera));
+			start_animations();
+		}
+	}
+	dragging = -1;
+	drag_v.clear();
+	magnetized.clear();
+	redraw();
+}
