@@ -20,13 +20,15 @@ public:
 	Window(Document &doc, Renderer &renderer);
 	// ds is  1: touch down, -1: touch lifted, 0: movement
 	// special case ds == -1, n == 0: lift all / cancel gesture
-	void handle_touch(int ds, int n, int *id, float *x, float *y);
+	void handle_touch(int ds, int n, int *id, float *x, float *y, std::function<void(ButtonAction)> button_callback);
 	#endif
 
 	void redraw();
 	bool animating() const{ return tnf > 0.0; }
 	void animate();
 	void reshape(int w, int h);
+
+	void button_action(ButtonAction a);
 
 private:
 	Document   &doc;
@@ -43,7 +45,6 @@ private:
 	std::unique_ptr<VictoryAnimation> va;
 	void start_animations();
 	int  hit_test(const ScreenCoords &p, bool pick_up);
-	void button_action(ButtonAction a);
 	bool button_hit(const Buttons::Button &b, float mx, float my);
 	void drop(); // release dragged piece(s)
 

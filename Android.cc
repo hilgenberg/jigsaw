@@ -12,6 +12,22 @@ static Renderer *renderer = NULL;
 static Window   *window = NULL;
 static Document  doc;
 
+static void callback(JNIEnv *env, jobject obj, ButtonAction i)
+{
+	switch (i)
+	{
+		case SETTINGS:
+		{
+			jclass cls = env->GetObjectClass(obj);
+			jmethodID mid = env->GetMethodID(cls, "change_image", "()V");
+			assert(mid != 0);
+			env->CallVoidMethod(obj, mid);
+			break;
+		}
+		default: if (window) window->button_action(i); break;
+	}
+}
+
 extern "C" {
 #define F(ret, name)       JNIEXPORT ret JNICALL Java_com_hilgenberg_jigsaw_PuzzleView_ ## name (JNIEnv *env, jclass obj)
 #define FF(ret, name, ...) JNIEXPORT ret JNICALL Java_com_hilgenberg_jigsaw_PuzzleView_ ## name (JNIEnv *env, jclass obj, __VA_ARGS__)
@@ -54,7 +70,7 @@ F(jboolean, draw)
 
 FF(void, touch_1uni, jint ds, jint id, jfloat x, jfloat y)
 {
-	if (window) window->handle_touch(ds, 1, &id, &x, &y);
+	if (window) window->handle_touch(ds, 1, &id, &x, &y, [env,obj](ButtonAction i){ callback(env, obj, i); });
 }
 
 FF(void, touch_1multi, jint ds, jintArray id_, jfloatArray x_, jfloatArray y_)
@@ -67,7 +83,7 @@ FF(void, touch_1multi, jint ds, jintArray id_, jfloatArray x_, jfloatArray y_)
 	jfloat *x = env->GetFloatArrayElements(x_, NULL);
 	jfloat *y = env->GetFloatArrayElements(y_, NULL);
 	jint  *id = env->GetIntArrayElements (id_, NULL);
-	try { window->handle_touch(ds, n, id, x, y); } catch (...) {}
+	try { window->handle_touch(ds, n, id, x, y, [env,obj](ButtonAction i){ callback(env, obj, i); }); } catch (...) {}
 	env->ReleaseFloatArrayElements(x_, x, JNI_ABORT);
 	env->ReleaseFloatArrayElements(y_, y, JNI_ABORT);
 	env->ReleaseIntArrayElements(id_, id, JNI_ABORT);
