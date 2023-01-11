@@ -9,7 +9,7 @@ void Buttons::reshape(Camera &camera)
 	if (H <= 0) H = 1;
 	float w = 0.15f * exp(3.0*Preferences::button_scale()), h = w, spc = h*0.5f;
 	if (W < H) h = w*W/H; else w = h*H/W;
-	const int nspc = 2, nb = 7;
+	const int nspc = 2, nb = 9;
 	P2f p(0.0, 0.0), dp(0.0, 0.0), ds(0.0, 0.0);
 
 	switch (Preferences::button_edge())
@@ -77,16 +77,19 @@ void Buttons::reshape(Camera &camera)
 	}
 
 	button_size.set(w, h, spc);
-	buttons.resize(nb);
-	auto *b = &buttons[-1];
-
-	(++b)->index = RESET_VIEW;   b->pos = p; p += dp;
-	(++b)->index = ARRANGE;      b->pos = p; p += dp;
-	(++b)->index = EDGE_ARRANGE; b->pos = p; p += dp;
+	buttons.resize(nb); int i = 0;
+	#define B(x) do{ assert(i < nb); auto &b = buttons[i++]; b.index = x; b.pos = p; p += dp; }while(0)
+	B(RESET_VIEW);
+	B(ARRANGE);
+	B(EDGE_ARRANGE);
 	p += ds;
-	(++b)->index = SETTINGS; b->pos = p; p += dp;
+	B(CHANGE_IMAGE);
+	B(SETTINGS);
+	B(PREFERENCES);
 	p += ds;
-	(++b)->index = HIDE;   b->pos = p; p += dp;
-	(++b)->index = SHOVEL; b->pos = p; p += dp;
-	(++b)->index = MAGNET; b->pos = p; p += dp;
+	B(HIDE);
+	B(SHOVEL);
+	B(MAGNET);
+	#undef B
+	assert(i == nb);
 }

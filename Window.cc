@@ -13,32 +13,19 @@
 
 #ifdef LINUX
 extern volatile bool quit;
-extern void toggle_gui();
 static inline double absmax(double a, double b){ return fabs(a) > fabs(b) ? a : b; }
 #endif
+extern void toggle_gui();
 
 void Window::redraw() { renderer.redraw(); }
 
-void Window::start_animations() { if (tnf <= 0.0) last_frame = tnf = now(); }
+void Window::start_animations() { if (!anim) { last_frame = now(); anim = true; } }
 
 void Window::animate()
 {
-	if (tnf <= 0.0) return;
+	if (!anim) return;
 
 	double t = now();
-	#ifdef LINUX
-	while (t < tnf)
-	{
-		sleep(tnf - t);
-		t = now();
-		if (quit) return;
-	}
-	int fps = Preferences::fps();
-	tnf = (fps <= 0) ? t : t + 0.99 / fps;
-	#else
-	tnf = t;
-	#endif
-
 	double dt = std::min(std::max(1e-42, t - last_frame), 0.25);
 	last_frame = t;
 
@@ -114,8 +101,7 @@ void Window::animate()
 		#endif
 		(dragging < 0 || drag_v.absq() < 1e-12) && !doc.animating())
 	{
-		tnf = -1.0;
-		return;
+		anim = false;
 	}
 }
 
@@ -126,11 +112,9 @@ void Window::button_action(ButtonAction a)
 		case ARRANGE:      arrange(doc.puzzle, false); start_animations(); break;
 		case EDGE_ARRANGE: arrange(doc.puzzle, true);  start_animations(); break;
 		case RESET_VIEW:   reset_view(doc.puzzle, doc.camera); break;
-		case SETTINGS:
-			#ifdef LINUX
-			toggle_gui();
-			#endif
-			break;
+		case CHANGE_IMAGE: break;
+		case SETTINGS:     toggle_gui(); break;
+		case PREFERENCES:  toggle_gui(); break;
 		case HIDE:   doc.tool = (doc.tool==Tool::HIDE   ? Tool::NONE : Tool::HIDE);   break;
 		case SHOVEL: doc.tool = (doc.tool==Tool::SHOVEL ? Tool::NONE : Tool::SHOVEL); break;
 		case MAGNET: doc.tool = (doc.tool==Tool::MAGNET ? Tool::NONE : Tool::MAGNET); break;

@@ -13,7 +13,7 @@ struct GL_Image final : public Serializable
 	}
 	
 	bool load(const std::string &path);
-	bool load(const std::vector<unsigned char> &data);
+	bool load(const unsigned char *data, size_t len);
 	virtual void load(Deserializer &s);
 	virtual void save(Serializer   &s) const;
 	

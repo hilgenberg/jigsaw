@@ -24,23 +24,25 @@ public:
 	#endif
 
 	void redraw();
-	bool animating() const{ return tnf > 0.0; }
+	bool animating() const{ return anim; }
 	void animate();
 	void reshape(int w, int h);
 
 	void button_action(ButtonAction a);
 
 private:
-	Document   &doc;
-	Renderer   &renderer; // just needed for calling redraw() on it
+	friend class GUI;
+	Document     &doc;
+	Renderer     &renderer; // just needed for calling redraw() on it
 
-	double      tnf = -1.0;        // scheduled time for next frame
-	double      last_frame = -1.0; // time of last animate() call
+	bool          anim = false;
+	double        last_frame = -1.0; // time of last animate() call
 
 	Puzzle::Piece dragging = -1;
 	P2d           drag_v {0.0, 0.0}; // move camera while dragging piece to the edge?
 	PuzzleCoords  drag_rel; // where is the mouse inside the dragged piece?
 	std::set<Puzzle::Piece> magnetized;
+	int           clicked_button = -1;
 
 	std::unique_ptr<VictoryAnimation> va;
 	void start_animations();
@@ -49,15 +51,12 @@ private:
 	void drop(); // release dragged piece(s)
 
 	#ifdef LINUX
-	friend class GUI;
 	SDL_Window *window;
 	std::map<SDL_Keycode, double> ikeys; // pressed key -> inertia
-	int clicked_button = -1;
 	#endif
 
 	#ifdef ANDROID
 	std::map<int, ScreenCoords> pointer_state;
-	int clicked_button = -1;
 	#endif
 };
 

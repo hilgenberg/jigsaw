@@ -28,10 +28,10 @@ Histogram::Histogram(const GL_Image &im, int W, int H)
 		for (int i = 0; i < W; ++i)
 		{
 			auto &h = hist[j*W+i];
-			int sum = 0;
+			double sum = 0.0;
 			for (int k = 0; k < 64; ++k)
 			{
-				sum += h[k]*h[k];
+				sum += (double)h[k] * (double)h[k];
 			}
 			unit[j*W+i] = sqrt(sum);
 		}
@@ -45,14 +45,8 @@ double Histogram::distance(Piece i, Piece j) const
 	assert(j >= 0 && j < (int)hist.size());
 	double s = 0.0;
 	for (int bin = 0; bin < 64; ++bin)
-	{
-		double a = hist[i][bin], b = hist[j][bin];
-		s += fabs(a/total[i]-b/total[j]);
-	}
-	if (s < 0.0 || s > 2.001)
-	{
-		std::cout << "S " << s << std::endl;
-	}
+		s += fabs(hist[i][bin]/(double)total[i] - hist[j][bin]/(double)total[j]);
+
 	assert(s >= 0.0 && s <= 2.001);
 	return s*0.5;
 }
@@ -63,15 +57,10 @@ double Histogram::similarity(Piece i, Piece j) const
 	assert(j >= 0 && j < (int)hist.size());
 	double s = 0.0;
 	for (int bin = 0; bin < 64; ++bin)
-	{
-		double a = hist[i][bin], b = hist[j][bin];
-		s += a*b;
-	}
-	s /= unit[i]*unit[j];
-	if (s < 0.0 || s > 1.001)
-	{
-		std::cout << "S " << s << std::endl;
-	}
+		s += (double)hist[i][bin] * (double)hist[j][bin];
+	s /= unit[i] * unit[j];
+
+	assert (i != j || fabs(s-1.0) < 1e-8);
 	assert(s >= 0.0 && s <= 1.001);
 	return s;
 }

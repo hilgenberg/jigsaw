@@ -5,6 +5,7 @@
 #include <iostream>
 #include <cstring>
 #include "GL_Util.h"
+#include "../data.h"
 
 //----------------------------------------------------------------------------------------------------------------------
 // GL_Image
@@ -15,6 +16,9 @@
 
 bool GL_Image::load(const std::string &path)
 {
+	if (path == "///sample-data")
+		return load(sample_data, sample_data_len);
+
 	//stbi_set_flip_vertically_on_load(true);
 	int x,y,n;
 	unsigned char *d1 = stbi_load(path.c_str(), &x, &y, &n, 4);
@@ -35,10 +39,10 @@ bool GL_Image::load(const std::string &path)
 	stbi_image_free(d1);
 	return true;
 }
-bool GL_Image::load(const std::vector<unsigned char> &data)
+bool GL_Image::load(const unsigned char *data, size_t len)
 {
 	int x,y,n;
-	unsigned char *d1 = stbi_load_from_memory(data.data(), (int)data.size(), &x, &y, &n, 4);
+	unsigned char *d1 = stbi_load_from_memory(data, (int)len, &x, &y, &n, 4);
 	if (!d1)
 	{
 		fprintf(stderr, "Error parsing image data: %s\n", stbi_failure_reason());

@@ -1,51 +1,71 @@
 #ifdef LINUX
-#include "GUI.h"
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_sdl.h"
 #include "imgui/backends/imgui_impl_opengl3.h"
+#else
+#include <android/native_window_jni.h>
+#include "imgui/imgui.h"
+#include "imgui/backends/imgui_impl_android.h"
+#define IMGUI_IMPL_OPENGL_ES3
+#include "imgui/backends/imgui_impl_opengl3.h"
+#endif
+
+#include "GUI.h"
 #include "Window.h"
 #include "Utility/Preferences.h"
+#include "data.h"
 
 extern volatile bool quit;
-extern const std::vector<unsigned char> &font_data();
 static std::string ini_location;
 
+#ifdef LINUX
 GUI::GUI(SDL_Window* window, SDL_GLContext context, Window &w)
 : w(w)
-, visible(false)
-, need_redraw(1)
+#else
+GUI::GUI(ANativeWindow *window, Window &w)
+: w(w)
+, window(window)
+#endif
 {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO &io = ImGui::GetIO();
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 	io.ConfigInputTextCursorBlink = false;
 	io.ConfigInputTrickleEventQueue = false;
-
-	auto p = Preferences::directory();
-	if (p.empty()) io.IniFilename = NULL; else {
-		::ini_location = p / "imgui.ini";
-		io.IniFilename = ::ini_location.c_str();
-	}
+	io.IniFilename = NULL;
+	#ifdef LINUX
 	ImGui_ImplSDL2_InitForOpenGL(window, context);
 	ImGui_ImplOpenGL3_Init();
+	float font_size = 18.0f;
+	#else
+	ImGui_ImplAndroid_Init(window);
+	ImGui_ImplOpenGL3_Init("#version 300 es");
+	ImGui::GetStyle().ScaleAllSizes(3.0f); // FIXME: Put some effort into DPI awareness
+	float font_size = 42.0f;
+	#endif
 
-	auto &fd = font_data();
 	ImFontConfig fc; fc.FontDataOwnedByAtlas = false;
 	static const ImWchar ranges[] = { 0x0001, 0xFFFF, 0 }; // get all
-	io.Fonts->AddFontFromMemoryTTF((void *)fd.data(), (int)fd.size(), 18.0f, &fc, ranges);
+	io.Fonts->AddFontFromMemoryTTF((void *)font_data, (int)font_data_len, font_size, &fc, ranges);
 }
-
+	
 GUI::~GUI()
 {
 	ImGui_ImplOpenGL3_Shutdown();
+	#ifdef LINUX
 	ImGui_ImplSDL2_Shutdown();
+	#else
+	ImGui_ImplAndroid_Shutdown();
+	#endif
 	ImGui::DestroyContext();
+	#ifdef ANDROID
+	ANativeWindow_release(window);
+	#endif
 }
 
-void GUI::update()
+void GUI::draw()
 {
+	#ifdef LINUX
 	if (ImGui::GetIO().MouseDrawCursor != visible)
 	{
 		ImGui::GetIO().MouseDrawCursor = visible;
@@ -64,13 +84,19 @@ void GUI::update()
 			return;
 		}
 	}
-	else if (!visible) return;
+	else
+	#endif
+	if (!visible) return;
 
 	bool dark = false; // TODO: go by image color
 	if (dark) ImGui::StyleColorsDark(); else ImGui::StyleColorsLight();
 
 	ImGui_ImplOpenGL3_NewFrame();
+	#ifdef LINUX
 	ImGui_ImplSDL2_NewFrame();
+	#else
+	ImGui_ImplAndroid_NewFrame();
+	#endif
 	ImGui::NewFrame();
 
 	ImGui::GetStyle().FrameBorderSize = dark ? 0.0f : 1.0f;
@@ -131,34 +157,31 @@ void GUI::update()
 	ImGui::Spacing();
 	ImGui::Spacing();
 
-	ImGui::Text("Animation FPS limit (-1 for none)");
-	i0 = Preferences::fps(); i = i0;
-	ImGui::InputInt("##fps", &i, 1, 0);
-	if (i != i0) Preferences::fps(i);
-
-	b0 = Preferences::vsync(); b = b0;
-	ImGui::Checkbox("VSync", &b);
-	if (b != b0) {
-		SDL_GL_SetSwapInterval(b);
-		Preferences::vsync(b); redraw();
+	if (ImGui::Button("Done"))
+	{
+		visible = false;
+		w.redraw();
 	}
+
 	ImGui::PopItemWidth();
 	ImGui::End();
 
 	#ifdef DEBUG
 	if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
 	#endif
-}
 
-void GUI::draw()
-{
-	if (!visible) return;
 	ImGui::Render();
 	glUseProgram(0);
+	glDisable(GL_DEPTH_TEST);
+	#ifdef ANDROID
+	ImGuiIO &io = ImGui::GetIO();
+	glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+	#endif
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	if (need_redraw > 0) --need_redraw;
 }
 
+#ifdef LINUX
 bool GUI::handle_event(const SDL_Event &event)
 {
 	bool h = ImGui_ImplSDL2_ProcessEvent(&event);
@@ -257,5 +280,17 @@ bool GUI::handle_event(const SDL_Event &event)
 			break;
 	}
 	return handled;
+}
+#else
+bool GUI::handle_touch(int ds, int n, int *id, float *x, float *y)
+{
+	if (!visible) return false;
+	redraw();
+	ImGuiIO &io = ImGui::GetIO();
+	if (n <= 0) { io.AddMouseButtonEvent(0, false); return true; }
+	// TODO: at least keep track of how many fingers are down
+	io.AddMousePosEvent(*x, *y);
+	io.AddMouseButtonEvent(0, ds >= 0);
+	return true;
 }
 #endif

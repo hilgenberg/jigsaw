@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 	SDL_Window* window = SDL_CreateWindow("Puzzle", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
 	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
 	SDL_GL_MakeCurrent(window, gl_context);
-	SDL_GL_SetSwapInterval(Preferences::vsync());
+	SDL_GL_SetSwapInterval(1);
 
 	if (glewInit() != GLEW_OK)
 	{
@@ -122,14 +122,14 @@ int main(int argc, char *argv[])
 		else if (n > 0)
 		{
 			std::string p = Preferences::image();
-			if (p.empty()) throw std::runtime_error("No default image set yet!");
+			if (p.empty()) p = "///sample-data";
 			if (!doc.load(p, n))
 				throw std::runtime_error("Can't read image");
 		}
 		else
 		{
 			if (!Preferences::load_state(doc))
- 				throw std::runtime_error("No valid savegame found. Please call with arguments!");
+				doc.load("///sample-data", n);
 		}
 
 		if (n > 0) Preferences::pieces(n);
@@ -162,8 +162,6 @@ int main(int argc, char *argv[])
 	
 			if (w.animating() || renderer.wants_redraw() || gui.needs_redraw())
 			{
-				gui.update();
-				GL_CHECK;
 				w.animate();
 				GL_CHECK;
 				renderer.draw();
@@ -174,7 +172,7 @@ int main(int argc, char *argv[])
 			}
 			else
 			{
-				constexpr double SLEEP_MIN = 1.0 / 1000, SLEEP_MAX = 1.0 / 30;
+				constexpr double SLEEP_MIN = 1.0 / 1000, SLEEP_MAX = 1.0 / 15;
 				double st = SLEEP_MIN;
 				while (!SDL_WaitEventTimeout(NULL, (int)(st*1000)))
 				{

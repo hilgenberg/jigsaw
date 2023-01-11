@@ -9,8 +9,6 @@ static bool save();
 static bool have_changes = false; // were any defaults changed?
 
 #ifdef LINUX
-static bool        vsync_          = true;
-static int         fps_            = 60;
 static std::string image_;
 static int         pieces_         = 256;
 #endif
@@ -27,8 +25,6 @@ static GL_Color    bg_color_(0.25);
 void reset_all()
 {
 	#ifdef LINUX
-	vsync_          = true;
-	fps_            = 60;
 	pieces_         = 256;
 	image_.clear();
 	#endif
@@ -40,8 +36,6 @@ void reset_all()
 	button_edge_    = LEFT;
 	button_align_   = TOP_OR_LEFT;
 	bg_color_       = GL_Color(0.25);
-	
-	have_changes = false;
 }
 
 static path cfg;
@@ -151,8 +145,6 @@ namespace Preferences
 	#define PREFR(type, name) type name() { return name##_; } void name(const type &value) { SET(name##_); }
 
 	#ifdef LINUX
-	PREFV(int,         fps);
-	PREFV(bool,        vsync);
 	PREFR(std::string, image);
 	PREFV(int,         pieces);
 	#endif
@@ -182,7 +174,7 @@ static bool load()
 	FILE *file = fopen(cf.c_str(), "r");
 	if (!file)
 	{
-		fprintf(stderr, "cannot read from config file %s!\n", cf.c_str());
+		LOG_ERROR("Cannot read from preference file %s!\n", cf.c_str());
 		return false;
 	}
 	try
@@ -190,8 +182,6 @@ static bool load()
 		FileReader fr(file);
 		Deserializer s(fr);
 		#ifdef LINUX
-		s.int32_ (fps_);
-		s.bool_  (vsync_);
 		s.int32_ (pieces_);
 		s.string_(image_);
 		#endif
@@ -205,6 +195,7 @@ static bool load()
 	}
 	catch (...)
 	{
+		LOG_ERROR("Exception while reading from preference file %s!\n", cf.c_str());
 		reset_all();
 		fclose(file);
 		return false;
@@ -221,7 +212,7 @@ static bool save()
 	FILE *file = fopen(cf.c_str(), "w");
 	if (!file)
 	{
-		fprintf(stderr, "cannot write to config file %s!\n", cf.c_str());
+		LOG_ERROR("Cannot write to preference file %s!\n", cf.c_str());
 		return false;
 	}
 	try
@@ -229,8 +220,6 @@ static bool save()
 		FileWriter fw(file);
 		Serializer s(fw);
 		#ifdef LINUX
-		s.int32_ (fps_);
-		s.bool_  (vsync_);
 		s.int32_ (pieces_);
 		s.string_(image_);
 		#endif
@@ -244,6 +233,7 @@ static bool save()
 	}
 	catch (...)
 	{
+		LOG_ERROR("Exception while writing to preference file %s!\n", cf.c_str());
 		fclose(file);
 		return false;
 	}

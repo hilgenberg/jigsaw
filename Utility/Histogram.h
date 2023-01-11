@@ -12,6 +12,6 @@ public:
 
 private:
 	std::vector<std::array<unsigned,64>> hist;
-	std::vector<unsigned> total;
-	std::vector<double>   unit;
+	std::vector<unsigned> total; // sum over each histogram
+	std::vector<double>   unit;  // 2-norm (hist[i]/unit[i] is unit vector)
 };

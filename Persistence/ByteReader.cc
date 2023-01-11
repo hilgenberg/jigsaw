@@ -49,6 +49,7 @@ FileReader::FileReader(FILE *f) : f(f), i(0)
 {
 	assert(f);
 	long p0 = ftell(f); // in case f has already been read from
+	assert(p0 >= 0);
 	fseek(f, 0L, SEEK_END);
 	n = ftell(f) - p0;
 	fseek(f, p0, SEEK_SET);

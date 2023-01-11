@@ -42,13 +42,17 @@ Renderer::Renderer(Document &doc)
 	{
 		GL_Image im;
 		std::vector<GL_Image> tmp(N_BUTTON_IMAGES);
-		tmp[ARRANGE].load(ic_arrange_data());
-		tmp[EDGE_ARRANGE].load(ic_edge_data());
-		tmp[RESET_VIEW].load(ic_view_data());
-		tmp[HIDE].load(ic_hide_data());
-		tmp[SHOVEL].load(ic_shovel_data());
-		tmp[MAGNET].load(ic_magnet_data());
-		tmp[SETTINGS].load(ic_settings_data());
+		#define ICON(id, x) tmp[id].load(x##_data, x##_data_len)
+		ICON(ARRANGE,      ic_arrange);
+		ICON(EDGE_ARRANGE, ic_edge);
+		ICON(RESET_VIEW,   ic_view);
+		ICON(HIDE,         ic_hide);
+		ICON(SHOVEL,       ic_shovel);
+		ICON(MAGNET,       ic_magnet);
+		ICON(CHANGE_IMAGE, ic_change_image);
+		ICON(SETTINGS,     ic_settings);
+		ICON(PREFERENCES,  ic_preferences);
+		#undef ICON
 		
 		int w = tmp[0].w(), h = tmp[0].h();
 		#ifndef NDEBUG

@@ -2,8 +2,7 @@
 #include <AL/al.h>
 #include <AL/alc.h>
 #include <AL/alut.h>
-
-extern const std::vector<unsigned char> &click_data();
+#include "data.h"
 
 static ALuint buffer = 0, source = 0;
 
@@ -26,8 +25,7 @@ bool audio_init(int &argc, char **argv)
 	alSource3f(source, AL_POSITION, 0, 0, 0); TEST_ERROR("source position");
 	alSource3f(source, AL_VELOCITY, 0, 0, 0); TEST_ERROR("source velocity");
 	alSourcei(source, AL_LOOPING, AL_FALSE); TEST_ERROR("source looping");
-	auto &sd = click_data();
-	buffer = alutCreateBufferFromFileImage(sd.data(), sd.size());
+	buffer = alutCreateBufferFromFileImage(click_data, click_data_len);
 	alSourcei(source, AL_BUFFER, buffer); TEST_ERROR("buffer binding");
 	return true;
 }

@@ -50,8 +50,6 @@ namespace Preferences
 	#define PREFR(type, name) type name(); void name(const type &value)
 	
 	#ifdef LINUX
-	PREFV(int,         fps);
-	PREFV(bool,        vsync);
 	PREFR(std::string, image);
 	PREFV(int,         pieces);
 	#endif
