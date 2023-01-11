@@ -244,6 +244,13 @@ bool GUI::handle_event(const SDL_Event &event)
 					return true;
 				}
 				break;
+
+			#ifdef DEBUG
+			case SDLK_d:
+				show_demo_window = !show_demo_window;
+				redraw();
+				return true;
+			#endif
 		}
 	}
 
