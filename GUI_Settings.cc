@@ -5,7 +5,7 @@ static constexpr int slider_flags = ImGuiSliderFlags_AlwaysClamp|ImGuiSliderFlag
 
 void GUI::p_settings()
 {
-	double m = 20.0, M = 1000.0;
+	double m = 20.0, M = Preferences::Nmax();
 	if (tmp_N < m) tmp_N = m;
 	if (tmp_N > M) tmp_N = M;
 	ImGui::SliderScalar("##N", ImGuiDataType_Double, &tmp_N, &m, &M, "%.0f Pieces", slider_flags);

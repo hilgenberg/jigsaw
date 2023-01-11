@@ -1,6 +1,7 @@
 #include "GL_Program.h"
 #include "Vector.h"
 #include "GL_Util.h"
+#include "GL_Color.h"
 
 GL_Program::~GL_Program()
 {
@@ -190,4 +191,9 @@ void GL_Program::uniform(int i, double v1, double v2)
 {
 	INDEX_TX;
 	glUniform2f(i, (float)v1, (float)v2);
+}
+void GL_Program::uniform(int i, const GL_Color &c)
+{
+	INDEX_TX;
+	glUniform4fv(i, 1, c.v);
 }

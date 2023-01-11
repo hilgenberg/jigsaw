@@ -1,5 +1,6 @@
 #pragma once
 #include "Matrix.h"
+struct GL_Color;
 
 class GL_Program
 {
@@ -22,6 +23,7 @@ public:
 	void uniform(int i, double v1, double v2);
 	void uniform(int i, const M3d &mat);
 	void uniform(int i, const M4d &mat);
+	void uniform(int i, const GL_Color &c);
 
 private:
 	std::vector<std::string> V, G, F;

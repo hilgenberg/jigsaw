@@ -19,6 +19,21 @@ struct GL_Color : public Serializable
 	bool     visible() const{ return a >= 1e-8f; }
 	bool      opaque() const{ return a >= 1.0f-1e-8f; }
 	float  lightness() const{ return 0.299f*r + 0.587f*g + 0.114f*b; }
+	void   light_mul(float f)
+	{
+		if (f <= 1.0f)
+		{
+			r *= f;
+			g *= f;
+			b *= f;
+		}
+		else
+		{
+			r = (f - 1.0f + r) / f;
+			g = (f - 1.0f + g) / f;
+			b = (f - 1.0f + b) / f;
+		}
+	}
 
 	union
 	{
@@ -40,8 +55,6 @@ struct GL_Color : public Serializable
 	bool operator!= (const GL_Color &c) const{ return !operator==(c); }
 	
 	GL_Color operator* (float alpha) const{ assert(alpha >= 0.0f && alpha <= 1.0f); return GL_Color(r, g, b, a * alpha); }
-
-	void hsl(double h, double s, double l); // leaves a as is
 };
 
 std::ostream &operator<<(std::ostream &os, const GL_Color &c);

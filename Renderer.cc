@@ -90,6 +90,9 @@ Renderer::Renderer(Document &doc)
 	bg_program.add_uniform("vec2",      "size"); // size of area
 	bg_program.add_uniform("sampler2D", "image");
 	bg_program.add_uniform("float",     "alpha");
+	bg_program.add_uniform("vec4",      "bg");
+	bg_program.add_uniform("vec4",      "bg_light");
+	bg_program.add_uniform("vec4",      "bg_dark");
 	bg_program.add_shaders(bg_vertex, NULL, bg_fragment_checker);
 	bg_program.add_shaders(NULL,      NULL, bg_fragment_image);
 
@@ -107,7 +110,8 @@ Renderer::Renderer(Document &doc)
 	button_program.add_uniform("sampler2D", "image");
 	button_program.add_uniform("vec2",      "size"); // size of buttons
 	button_program.add_uniform("int",       "n_buttons"); // number of buttons in the texture
-	button_program.add_shaders(buttons_vertex, buttons_geometry, buttons_fragment);
+	button_program.add_shaders(buttons_vertex, buttons_geometry, buttons_fragment_light);
+	button_program.add_shaders(NULL,           NULL,             buttons_fragment_dark);
 
 	//----------------------------------------------------------------------------
 	// attribute allocation
@@ -208,6 +212,9 @@ void Renderer::draw_background()
 	glDisable(GL_DEPTH_TEST);
 	bg_program.use(use_image);
 	glBindVertexArray(bg_VAO); // empty but needed
+	bg_program.uniform(0, doc.camera.matrix());
+	bg_program.uniform(1, puzzle.W*puzzle.sx, puzzle.H*puzzle.sy);
+	bg_program.uniform(4, Preferences::bg_color());
 	if (use_image)
 	{
 		glActiveTexture(GL_TEXTURE0);
@@ -216,8 +223,24 @@ void Renderer::draw_background()
 		bg_program.uniform(3, Preferences::solution_alpha());
 		GL_CHECK;
 	}
-	bg_program.uniform(0, doc.camera.matrix());
-	bg_program.uniform(1, puzzle.W*puzzle.sx, puzzle.H*puzzle.sy);
+	else
+	{
+		GL_Color c1 = Preferences::bg_color(), c2 = c1;
+		if (Preferences::dark_mode())
+		{
+			// lighten the colors
+			c1.light_mul(0.29f/0.25f);
+			c2.light_mul(0.3f/0.25f);
+		}
+		else
+		{
+			// darken the colors
+			c1.light_mul(0.25f/0.29f);
+			c2.light_mul(0.25f/0.3f);
+		}
+		bg_program.uniform(5, c1);
+		bg_program.uniform(6, c2);
+	}
 	GL_CHECK;
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -284,7 +307,7 @@ void Renderer::draw_buttons()
 	if (doc.buttons.buttons.empty()) return;
 	assert((int)doc.buttons.buttons.size() <= MAX_BUTTONS);
 
-	button_program.use();
+	button_program.use(1-Preferences::dark_mode());
 	glBindVertexArray(button_VAO[current_buf]);
 	#ifdef LINUX
 	float *data = (float*)glMapNamedBuffer(button_VBO[current_buf], GL_WRITE_ONLY);

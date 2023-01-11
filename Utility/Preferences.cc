@@ -16,6 +16,7 @@ static int         pieces_         = 256;
 static float       solution_alpha_ = 0.0f;
 static bool        absolute_mode_  = false;
 static EdgeType    edge_           = Regular;
+static int         Nmax_           = 1000;
 static float       button_scale_   = 0.0f;
 static bool        spiral_         = false;
 static ScreenEdge  button_edge_    = LEFT;
@@ -29,6 +30,7 @@ void reset_all()
 	image_.clear();
 	#endif
 	edge_           = Regular;
+	Nmax_           = 1000;
 	solution_alpha_ = 0.0f;
 	absolute_mode_  = false;
 	button_scale_   = 0.0f;
@@ -150,6 +152,7 @@ namespace Preferences
 	#endif
 
 	PREFV(EdgeType,    edge);
+	PREFV(int,         Nmax);
 	PREFR(GL_Color,    bg_color);
 	PREFV(float,       solution_alpha);
 	PREFV(bool,        absolute_mode);
@@ -189,6 +192,7 @@ static bool load()
 		s.bool_  (absolute_mode_);
 		s.bool_  (spiral_);
 		s.enum_  (edge_, None, Circle);
+		s.int32_ (Nmax_);
 		s.float_ (button_scale_);
 		s.enum_  (button_edge_, LEFT, BOTTOM);
 		s.enum_  (button_align_, TOP_OR_LEFT, BOTTOM_OR_RIGHT);
@@ -227,6 +231,7 @@ static bool save()
 		s.bool_  (absolute_mode_);
 		s.bool_  (spiral_);
 		s.enum_  ((int)edge_, None, Circle);
+		s.int32_ (Nmax_);
 		s.float_ (button_scale_);
 		s.enum_  ((int)button_edge_, LEFT, BOTTOM);
 		s.enum_  ((int)button_align_, TOP_OR_LEFT, BOTTOM_OR_RIGHT);

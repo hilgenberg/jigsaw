@@ -107,7 +107,7 @@ void GUI::draw()
 	#endif
 	if (!visible) return;
 
-	bool dark = false; // TODO: go by bg color
+	bool dark = Preferences::dark_mode();
 	if (dark) ImGui::StyleColorsDark(); else ImGui::StyleColorsLight();
 
 	ImGui_ImplOpenGL3_NewFrame();
@@ -121,17 +121,16 @@ void GUI::draw()
 	ImGui::GetStyle().FrameBorderSize = dark ? 0.0f : 1.0f;
 
 	ImGuiViewport &screen = *ImGui::GetMainViewport();
-	//ImGui::SetNextWindowPos(screen.WorkPos);
-	//ImGui::SetNextWindowSize(ImVec2(screen.WorkSize.x, 0.0f));
 	ImGui::SetNextWindowBgAlpha(0.75f);
 	ImVec2 center = screen.GetCenter();
-	ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 	//ImGui::SetNextWindowSize(screen.WorkSize, ImGuiCond_Always);
-	ImGui::Begin("Preferences", NULL, 
+
+	ImGui::Begin(format("##GUI Page %d", page).c_str(), NULL, 
 		ImGuiWindowFlags_AlwaysAutoResize | 
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoResize |
-		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoSavedSettings | 
 		ImGuiWindowFlags_NoCollapse);
 
 	switch (page)

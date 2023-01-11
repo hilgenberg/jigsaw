@@ -55,6 +55,7 @@ namespace Preferences
 	#endif
 	
 	PREFV(EdgeType,    edge);
+	PREFV(int,         Nmax);
 	PREFR(GL_Color,    bg_color);
 	PREFV(float,       solution_alpha);
 	PREFV(bool,        absolute_mode);
@@ -65,4 +66,6 @@ namespace Preferences
 	
 	#undef PREFV
 	#undef PREFR
+
+	inline bool dark_mode() { return bg_color().lightness() < 0.5f; }
 };
