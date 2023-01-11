@@ -118,7 +118,15 @@ void GUI::draw()
 	#endif
 	ImGui::NewFrame();
 
-	ImGui::GetStyle().FrameBorderSize = dark ? 0.0f : 1.0f;
+	auto &style = ImGui::GetStyle();
+	style.FrameBorderSize = dark ? 0.0f : 1.0f;
+	style.FrameRounding = 3.0f;
+	style.WindowRounding = 5.0f;
+	//style.ChildRounding = 5.0f;
+	#ifdef ANDROID
+	style.FrameRounding *= 3.0f;
+	style.WindowRounding *= 3.0f;
+	#endif
 
 	ImGuiViewport &screen = *ImGui::GetMainViewport();
 	ImGui::SetNextWindowBgAlpha(0.75f);
