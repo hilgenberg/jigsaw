@@ -15,7 +15,7 @@ static constexpr int colorEditFlags =
 void GUI::p_preferences()
 {
 	ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
-	bool b0, b; int i0, i;
+	bool b0, b; int i0, i; float f0, f;
 	
 	static const char *edges[] = {"Square Tiles", "Regular Jigsaw", "Triangular Edge", "Rectangular Edge", "Semicircle"};
 	i = i0 = Preferences::edge();
@@ -35,12 +35,12 @@ void GUI::p_preferences()
 	ImGui::Combo("##N_MAX", &i, s_max_pieces, NUM_OPTIONS);
 	if (i != i0) Preferences::Nmax(n_max_pieces[i]);
 
-	float f0 = Preferences::solution_alpha(), f = f0;
+	f0 = Preferences::solution_alpha(); f = f0;
 	ImGui::SliderFloat("##Solution Alpha", &f, 0.0f, 1.0f, "Solution Visibility", ImGuiSliderFlags_Logarithmic|ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_NoInput);
 	if (f != f0) Preferences::solution_alpha(f);
 
 	b0 = Preferences::absolute_mode(); b = b0;
-	ImGui::Checkbox("Absolute Mode", &b);
+	ImGui::Checkbox("Snap to Solution", &b);
 	if (b != b0) Preferences::absolute_mode(b);
 
 	GL_Color orig = Preferences::bg_color(), tmp = orig;
@@ -77,6 +77,14 @@ void GUI::p_preferences()
 	i = i0 = Preferences::button_align();
 	ImGui::Combo("##Button Alignment", &i, button_v ? button_align_v : button_align_h, 3);
 	if (i != i0) { Preferences::button_align((ScreenAlign)i); w.doc.buttons.reshape(w.doc.camera); }
+
+	SPC;
+
+	f0 = Preferences::finger_radius(); f = f0;
+	ImGuiIO &io = ImGui::GetIO();
+	float mf = 0.5f*0.25*std::min(io.DisplaySize.x, io.DisplaySize.y);
+	ImGui::SliderFloat("##Finger Radius", &f, 0.0f, mf, "Finger Radius", ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_NoInput);
+	if (f != f0) Preferences::finger_radius(f);
 
 	SPC;
 

@@ -134,7 +134,11 @@ void Window::reshape(int w, int h)
 
 int Window::hit_test(const ScreenCoords &p, bool pick_up)
 {
-	Puzzle::Piece i = doc.puzzle.hit_test(doc.puzzle.from_camera(doc.camera.from_screen(p)), drag_rel);
+	float r = Preferences::finger_radius();
+	Puzzle::Piece i = doc.puzzle.hit_test(
+		doc.puzzle.from_camera(doc.camera.from_screen(p)),
+		doc.puzzle.from_camera(doc.camera.dconvert(ScreenCoords(r, r))), 
+		drag_rel);
 	if (pick_up && i >= 0) doc.puzzle.pick_up(i);
 	return i;
 }

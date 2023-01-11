@@ -63,6 +63,7 @@ namespace Preferences
 	PREFV(ScreenEdge,  button_edge);
 	PREFV(ScreenAlign, button_align);
 	PREFV(bool,        spiral);
+	PREFV(float,       finger_radius); // in pixels
 	
 	#undef PREFV
 	#undef PREFR

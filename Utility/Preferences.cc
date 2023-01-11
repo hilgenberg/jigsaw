@@ -11,7 +11,11 @@ static bool have_changes = false; // were any defaults changed?
 #ifdef LINUX
 static std::string image_;
 static int         pieces_         = 256;
+#define DEFAULT_FINGER 20.0f
+#else
+#define DEFAULT_FINGER 60.0f
 #endif
+
 
 static float       solution_alpha_ = 0.0f;
 static bool        absolute_mode_  = false;
@@ -20,8 +24,9 @@ static int         Nmax_           = 1000;
 static float       button_scale_   = 0.0f;
 static bool        spiral_         = false;
 static ScreenEdge  button_edge_    = LEFT;
-static ScreenAlign button_align_   = TOP_OR_LEFT;
+static ScreenAlign button_align_   = CENTERED;
 static GL_Color    bg_color_(0.25);
+static float       finger_radius_  = DEFAULT_FINGER;
 
 void reset_all()
 {
@@ -38,6 +43,7 @@ void reset_all()
 	button_edge_    = LEFT;
 	button_align_   = TOP_OR_LEFT;
 	bg_color_       = GL_Color(0.25);
+	finger_radius_  = DEFAULT_FINGER;
 }
 
 static path cfg;
@@ -160,6 +166,7 @@ namespace Preferences
 	PREFV(ScreenEdge,  button_edge);
 	PREFV(ScreenAlign, button_align);
 	PREFV(bool,        spiral);
+	PREFV(float,       finger_radius);
 };
 
 
@@ -196,6 +203,7 @@ static bool load()
 		s.float_ (button_scale_);
 		s.enum_  (button_edge_, LEFT, BOTTOM);
 		s.enum_  (button_align_, TOP_OR_LEFT, BOTTOM_OR_RIGHT);
+		s.float_ (finger_radius_);
 	}
 	catch (...)
 	{
@@ -235,6 +243,7 @@ static bool save()
 		s.float_ (button_scale_);
 		s.enum_  ((int)button_edge_, LEFT, BOTTOM);
 		s.enum_  ((int)button_align_, TOP_OR_LEFT, BOTTOM_OR_RIGHT);
+		s.float_ (finger_radius_);
 	}
 	catch (...)
 	{

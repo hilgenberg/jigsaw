@@ -56,7 +56,7 @@ struct Puzzle : public Serializable
 	void  pick_up(Piece i); // move to top of z-order (i.e. to end of z vector)
 	void  magnetize(std::set<Piece> &I, PuzzleCoords dp); // recursively puts all touching pieces into magnet
 	bool  connect(std::set<Piece> &I, double delta_max); // returns true for new connections
-	Piece hit_test(const PuzzleCoords &p, PuzzleCoords &rel) const;
+	Piece hit_test(const PuzzleCoords &p, const PuzzleCoords &radius, PuzzleCoords &rel) const;
 
 	inline bool align(Piece i, Piece j, double delta_max) const // should they get connected?
 	{
