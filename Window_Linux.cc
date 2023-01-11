@@ -11,9 +11,9 @@
 #include "Victory.h"
 #include "Puzzle_Tools.h"
 #include "Buttons.h"
+#include "GUI.h"
 #include <SDL.h>
 extern volatile bool quit;
-extern void toggle_gui();
 
 static inline double absmax(double a, double b){ return fabs(a) > fabs(b) ? a : b; }
 
@@ -196,6 +196,8 @@ bool Window::handle_key(SDL_Keysym keysym, bool release)
 
 	if (!release) switch (key)
 	{
+		case SDLK_ESCAPE: GUI::Toggle(); return true;
+
 		case SDLK_LEFT: case SDLK_RIGHT:
 		case SDLK_UP:   case SDLK_DOWN:
 		case SDLK_PLUS: case SDLK_MINUS:

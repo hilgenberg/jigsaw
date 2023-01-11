@@ -20,6 +20,7 @@ struct Document : public Serializable
 	bool load(const std::string &im_path, int n = -1);
 	void load(Deserializer &s);
 	void save(Serializer &s) const;
+	bool reset_N(int N);
 
 	bool animating() const{ return !puzzle.animations.empty(); }
 	void draw();

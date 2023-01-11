@@ -3,7 +3,7 @@
 struct ImagePuzzle;
 class Camera;
 
-void arrange(Puzzle &puzzle, bool edge);
+void arrange(Puzzle &puzzle, bool edge, bool animate = true);
 void reset_view(Puzzle &puzzle, Camera &camera);
 
 void drag_tool(Puzzle &puzzle, Camera &camera, Puzzle::Piece piece, std::set<Puzzle::Piece> &magnet, const PuzzleCoords &rel, const ScreenCoords &dst, P2d &autoscroll, double mdx = 0, double mdy = 0);

@@ -115,27 +115,7 @@ Renderer::Renderer(Document &doc)
 
 	glGenVertexArrays(1, &bg_VAO);
 
-	const int N = doc.puzzle.N;
-	glGenVertexArrays(2, VAO);
-	glGenBuffers(2, VBO);
-	#define VERTEX_DATA_SIZE N*(4*sizeof(float) + 1) /* needed below for the GLES version */
-	for (int i = 0; i < 2; ++i)
-	{
-		assert(sizeof(Puzzle::Border) == 1);
-		glBindVertexArray(VAO[i]);
-		glBindBuffer(GL_ARRAY_BUFFER, VBO[i]);
-		glBufferData(GL_ARRAY_BUFFER, VERTEX_DATA_SIZE, NULL, GL_DYNAMIC_DRAW);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)0); // pos
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)(2*sizeof(float))); // tex
-		glVertexAttribIPointer(2, 1, GL_UNSIGNED_BYTE,  0, (void*)(4*sizeof(float)*N)); // border
-		glEnableVertexAttribArray(0);
-		glEnableVertexAttribArray(1);
-		glEnableVertexAttribArray(2);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		GL_CHECK;
-	}
+	alloc_puzzle(false);
 
 	glGenVertexArrays(2, button_VAO);
 	glGenBuffers(2, button_VBO);
@@ -158,6 +138,39 @@ Renderer::Renderer(Document &doc)
 	}
 
 	glBindVertexArray(0); 
+}
+
+
+void Renderer::alloc_puzzle(bool free_old_buffers)
+{
+	if (free_old_buffers)
+	{
+		glDeleteVertexArrays(2, VAO);
+		glDeleteBuffers(2, VBO);
+	}
+
+	const int N = doc.puzzle.N;
+	glGenVertexArrays(2, VAO);
+	glGenBuffers(2, VBO);
+	#define VERTEX_DATA_SIZE N*(4*sizeof(float) + 1) /* needed below for the GLES version */
+	for (int i = 0; i < 2; ++i)
+	{
+		assert(sizeof(Puzzle::Border) == 1);
+		glBindVertexArray(VAO[i]);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO[i]);
+		glBufferData(GL_ARRAY_BUFFER, VERTEX_DATA_SIZE, NULL, GL_DYNAMIC_DRAW);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)0); // pos
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)(2*sizeof(float))); // tex
+		glVertexAttribIPointer(2, 1, GL_UNSIGNED_BYTE,  0, (void*)(4*sizeof(float)*N)); // border
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+		glEnableVertexAttribArray(2);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		GL_CHECK;
+	}
+	current_N = N;
 }
 
 Renderer::~Renderer()
@@ -329,6 +342,10 @@ void Renderer::draw()
 	#ifdef ANDROID
 	if (eglGetCurrentContext() != context) return;
 	#endif
+
+	const int N = doc.puzzle.N;
+	if (current_N < N || (current_N > N+100 && current_N > N*1.5))
+		alloc_puzzle(true);
 
 	const Camera &camera = doc.camera;
 	int w = camera.screen_w(), h = camera.screen_h();

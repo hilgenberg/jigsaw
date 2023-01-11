@@ -21,6 +21,15 @@ bool Document::load(const std::string &p, int N)
 	if (!puzzle.load(p)) return false;
 	puzzle.reset(puzzle.im.w(), puzzle.im.h(), N);
 	puzzle.shuffle(false);
+	arrange(puzzle, false, false);
+	reset_view(puzzle, camera);
+	return true;
+}
+bool Document::reset_N(int N)
+{
+	puzzle.reset(puzzle.im.w(), puzzle.im.h(), N);
+	puzzle.shuffle(false);
+	arrange(puzzle, false, false);
 	reset_view(puzzle, camera);
 	return true;
 }

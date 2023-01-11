@@ -5,7 +5,7 @@
 
 static inline bool even(int i) { return !(i&1); }
 
-static void pack_edge(Puzzle &puzzle, std::vector<int> &P, CameraCoords c, CameraCoords r, double w, double h)
+static void pack_edge(Puzzle &puzzle, std::vector<int> &P, CameraCoords c, CameraCoords r, double w, double h, bool animate)
 // c +- r/2 are the edge's endpoints
 // w, h are the pieces' dimensions along and across the edge
 {
@@ -27,7 +27,7 @@ static void pack_edge(Puzzle &puzzle, std::vector<int> &P, CameraCoords c, Camer
 		int nrow = std::min((int)P.size() - nx*y, nx);
 		if (even(nrow)) p += r * (0.5*(w+spcx));
 
-		puzzle.move(i, puzzle.from_camera(p), true);
+		puzzle.move(i, puzzle.from_camera(p), animate);
 	}
 }
 
@@ -38,7 +38,7 @@ static void move(Puzzle &puzzle, Puzzle::Piece i, double x, double y, bool anim,
 	if (y < y0) y0 = y; if (y+puzzle.sy > y1) y1 = y+puzzle.sy;
 }
 
-void arrange(Puzzle &puzzle, bool edge)
+void arrange(Puzzle &puzzle, bool edge, bool animate)
 {
 	const int W = puzzle.W, H = puzzle.H;
 	if (W < 2 || H < 2 || Preferences::edge() == None) edge = false;
@@ -54,7 +54,7 @@ void arrange(Puzzle &puzzle, bool edge)
 	Y0 -= 0.5; Y1 += 0.5;
 
 	const double w = puzzle.sx, h = puzzle.sy;
-	const bool ani = (puzzle.N < 1000000);
+	if (puzzle.N > 1000000) animate = false;
 	if (Preferences::spiral())
 	{
 		const double rp = 0.5*1.3*hypot(w, h);
@@ -67,7 +67,7 @@ void arrange(Puzzle &puzzle, bool edge)
 
 			float x = c.x + r*cos(a);
 			float y = c.y + r*sin(a);
-			move(puzzle, i, x, y, ani, X0, X1, Y0, Y1);
+			move(puzzle, i, x, y, animate, X0, X1, Y0, Y1);
 			a += 2.0*rp/r;
 			r += 2.0*rp/r * rp/M_PI;
 		}
@@ -90,7 +90,7 @@ void arrange(Puzzle &puzzle, bool edge)
 			if (edge && puzzle.is_edge_piece(i)) continue;
 			double x = X00 + ix * (w+spcx);
 			double y = Y00 + iy * (h+spcy);
-			move(puzzle, i, x, y, ani, X0, X1, Y0, Y1);
+			move(puzzle, i, x, y, animate, X0, X1, Y0, Y1);
 			ix += dx;
 			iy += dy;
 			if      (dx ==  1 && ix >= x1  ) { dx =  0; dy =  1; --y0; }
@@ -108,21 +108,21 @@ void arrange(Puzzle &puzzle, bool edge)
 		double Xm = (X0+X1)*0.5, Ym = (Y0+Y1)*0.5;
 		const double w = puzzle.sx, h = puzzle.sy;
 
-		if (puzzle.should_arrange( 0 )) puzzle.move(  0, puzzle.from_camera(P2d(X0-w, Y0-h)), true);
-		if (puzzle.should_arrange(W-1)) puzzle.move(W-1, puzzle.from_camera(P2d(X1,   Y0-h)), true);
-		if (puzzle.should_arrange(N-W)) puzzle.move(N-W, puzzle.from_camera(P2d(X0-w, Y1  )), true);
-		if (puzzle.should_arrange(N-1)) puzzle.move(N-1, puzzle.from_camera(P2d(X1,   Y1  )), true);
+		if (puzzle.should_arrange( 0 )) puzzle.move(  0, puzzle.from_camera(P2d(X0-w, Y0-h)), animate);
+		if (puzzle.should_arrange(W-1)) puzzle.move(W-1, puzzle.from_camera(P2d(X1,   Y0-h)), animate);
+		if (puzzle.should_arrange(N-W)) puzzle.move(N-W, puzzle.from_camera(P2d(X0-w, Y1  )), animate);
+		if (puzzle.should_arrange(N-1)) puzzle.move(N-1, puzzle.from_camera(P2d(X1,   Y1  )), animate);
 
 		std::vector<int> P; for (int i = 1; i < W-1; ++i) if (puzzle.should_arrange(i)) P.push_back(i);
-		pack_edge(puzzle, P, CameraCoords(Xm-0.5f*w, Y0-h), CameraCoords(X1-X0, 0.0f), w, h);
+		pack_edge(puzzle, P, CameraCoords(Xm-0.5f*w, Y0-h), CameraCoords(X1-X0, 0.0f), w, h, animate);
 
 		P.clear(); for (int i = W+W-1; i < N-1; i += W) if (puzzle.should_arrange(i)) P.push_back(i);
-		pack_edge(puzzle, P, CameraCoords(X1, Ym-0.5f*h), CameraCoords(0.0f, Y1-Y0), h, w);
+		pack_edge(puzzle, P, CameraCoords(X1, Ym-0.5f*h), CameraCoords(0.0f, Y1-Y0), h, w, animate);
 
 		P.clear(); for (int i = (H-1)*W+1; i < N-1; ++i) if (puzzle.should_arrange(i)) P.push_back(i);
-		pack_edge(puzzle, P, CameraCoords(Xm-0.5f*w, Y1), CameraCoords(X0-X1, 0.0f), w, h);
+		pack_edge(puzzle, P, CameraCoords(Xm-0.5f*w, Y1), CameraCoords(X0-X1, 0.0f), w, h, animate);
 
 		P.clear(); for (int i = W; i < (H-1)*W; i += W) if (puzzle.should_arrange(i)) P.push_back(i);
-		pack_edge(puzzle, P, CameraCoords(X0-w, Ym-0.5f*h), CameraCoords(0.0f, Y0-Y1), h, w);
+		pack_edge(puzzle, P, CameraCoords(X0-w, Ym-0.5f*h), CameraCoords(0.0f, Y0-Y1), h, w, animate);
 	}
 }

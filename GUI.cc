@@ -16,7 +16,8 @@
 #include "data.h"
 
 extern volatile bool quit;
-static std::string ini_location;
+
+GUI *GUI::gui = NULL;
 
 #ifdef LINUX
 GUI::GUI(SDL_Window* window, SDL_GLContext context, Window &w)
@@ -27,6 +28,8 @@ GUI::GUI(ANativeWindow *window, Window &w)
 , window(window)
 #endif
 {
+	assert(!gui); gui = this;
+
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO &io = ImGui::GetIO();
@@ -51,6 +54,8 @@ GUI::GUI(ANativeWindow *window, Window &w)
 	
 GUI::~GUI()
 {
+	assert(gui == this); gui = NULL;
+
 	ImGui_ImplOpenGL3_Shutdown();
 	#ifdef LINUX
 	ImGui_ImplSDL2_Shutdown();
@@ -61,6 +66,20 @@ GUI::~GUI()
 	#ifdef ANDROID
 	ANativeWindow_release(window);
 	#endif
+}
+
+void GUI::toggle() { visible = !visible; w.redraw(); }
+void GUI::close() { visible = false; w.redraw(); }
+
+void GUI::init_page()
+{
+	switch (page)
+	{
+		case PREFERENCES: break;
+		case SETTINGS:
+			tmp_N = w.doc.puzzle.N; break;
+		default: assert(false);
+	}
 }
 
 void GUI::draw()
@@ -88,7 +107,7 @@ void GUI::draw()
 	#endif
 	if (!visible) return;
 
-	bool dark = false; // TODO: go by image color
+	bool dark = false; // TODO: go by bg color
 	if (dark) ImGui::StyleColorsDark(); else ImGui::StyleColorsLight();
 
 	ImGui_ImplOpenGL3_NewFrame();
@@ -101,69 +120,27 @@ void GUI::draw()
 
 	ImGui::GetStyle().FrameBorderSize = dark ? 0.0f : 1.0f;
 
-	// Always center preference window when appearing
-	ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-	ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-	ImGui::Begin("Preferences", NULL, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoCollapse);
-	ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
-	bool b0, b; int i0, i;
-	
-	static const char *edges[] = {"Square Tiles", "Regular Jigsaw", "Triangular Edge", "Rectangular Edge", "Semicircle"};
-	i = i0 = Preferences::edge();
-	ImGui::Combo("##Edges", &i, edges, 5);
-	if (i != i0) Preferences::edge((EdgeType)i);
+	ImGuiViewport &screen = *ImGui::GetMainViewport();
+	//ImGui::SetNextWindowPos(screen.WorkPos);
+	//ImGui::SetNextWindowSize(ImVec2(screen.WorkSize.x, 0.0f));
+	ImGui::SetNextWindowBgAlpha(0.75f);
+	ImVec2 center = screen.GetCenter();
+	ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	//ImGui::SetNextWindowSize(screen.WorkSize, ImGuiCond_Always);
+	ImGui::Begin("Preferences", NULL, 
+		ImGuiWindowFlags_AlwaysAutoResize | 
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoCollapse);
 
-	float f0 = Preferences::solution_alpha(), f = f0;
-	ImGui::SliderFloat("##Solution Alpha", &f, 0.0f, 1.0f, "Solution Alpha: %.3f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_NoInput);
-	if (f != f0) Preferences::solution_alpha(f);
-
-	b0 = Preferences::absolute_mode(); b = b0;
-	ImGui::Checkbox("Absolute Mode", &b);
-	if (b != b0) Preferences::absolute_mode(b);
-
-	b0 = Preferences::spiral(); b = b0;
-	ImGui::Checkbox("Spiral Arrange", &b);
-	if (b != b0) Preferences::spiral(b);
-
-	ImGui::Spacing();
-	ImGui::Spacing();
-	ImGui::Spacing();
-	ImGui::Spacing();
-	ImGui::Spacing();
-	
-	f0 = Preferences::button_scale(); f = f0;
-	ImGui::SliderFloat("##Button Scale", &f, -1.0f, 1.0f, "Button Scale: %.3f", ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_NoInput);
-	if (f != f0)
+	switch (page)
 	{
-		Preferences::button_scale(f);
-		w.doc.buttons.reshape(w.doc.camera);
-	}
-	
-	static const char *button_edges[] = {"Left", "Right", "Top", "Bottom"};
-	i = i0 = Preferences::button_edge();
-	ImGui::Combo("##Button Placement", &i, button_edges, 4);
-	if (i != i0) { Preferences::button_edge((ScreenEdge)i); w.doc.buttons.reshape(w.doc.camera); }
-	bool button_v = (i == LEFT || i == RIGHT);
-	
-	static const char *button_align_h[] = {"Left", "Center", "Right"};
-	static const char *button_align_v[] = {"Top", "Center", "Bottom"};
-	i = i0 = Preferences::button_align();
-	ImGui::Combo("##Button Alignment", &i, button_v ? button_align_v : button_align_h, 3);
-	if (i != i0) { Preferences::button_align((ScreenAlign)i); w.doc.buttons.reshape(w.doc.camera); }
-
-	ImGui::Spacing();
-	ImGui::Spacing();
-	ImGui::Spacing();
-	ImGui::Spacing();
-	ImGui::Spacing();
-
-	if (ImGui::Button("Done"))
-	{
-		visible = false;
-		w.redraw();
+		case PREFERENCES: p_preferences(); break;
+		case SETTINGS: p_settings(); break;
+		default: assert(false);
 	}
 
-	ImGui::PopItemWidth();
 	ImGui::End();
 
 	#ifdef DEBUG

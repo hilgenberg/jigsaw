@@ -20,17 +20,29 @@ public:
 	#endif
 	~GUI();
 
-	void show() { if (!visible) redraw(); visible = true; }
-	void toggle() { visible = !visible; redraw(); }
+	enum Page
+	{
+		PREFERENCES,
+		SETTINGS, // puzzle settings (N, cropping, ...)
+	};
+	void show(Page p) { if (!visible) redraw(); visible = true; page = p; init_page(); }
+	static void Show(Page p) { if (gui) gui->show(p); }
+
+	void toggle();
+	void close();
+	static void Toggle() { if (gui) gui->toggle(); }
+
 	void redraw(int n_frames = 3){ need_redraw = std::max(n_frames, need_redraw); }
 	bool needs_redraw() const{ return visible && need_redraw > 0; }
 	
 	void draw();
 
+	static GUI *gui; // the one and only instance
 	Window &w;
 
 private:
 	bool visible = false;
+	Page page = PREFERENCES;
 	int  need_redraw = 0; // imgui assumes a continuous render loop, but we only draw if
 	                      // we have to, so this is some number of frames and not a single
 	                      // bool to allow it to run its animations
@@ -41,4 +53,11 @@ private:
 	#ifdef DEBUG
 	bool show_demo_window = false;
 	#endif
+
+	void p_preferences();
+
+	void p_settings();
+	double tmp_N;
+
+	void init_page();
 };

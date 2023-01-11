@@ -24,12 +24,6 @@ static int usage(const char *arg0)
 	return 1;
 }
 
-GUI *gui = NULL;
-void toggle_gui()
-{
-	if (gui) gui->toggle();
-}
-
 int main(int argc, char *argv[])
 {
 	Preferences::reset();
@@ -137,8 +131,7 @@ int main(int argc, char *argv[])
 		GL_CHECK;
 		Renderer renderer(doc);
 		Window w(window, doc, renderer);
-		GUI gui(window, gl_context, w);
-		::gui = &gui;
+		new GUI(window, gl_context, w);
 
 		GL_CHECK;
 
@@ -148,7 +141,7 @@ int main(int argc, char *argv[])
 			SDL_Event event;
 			while (!quit && SDL_PollEvent(&event))
 			{
-				if (gui.handle_event(event)) continue;
+				if (GUI::gui->handle_event(event)) continue;
 				if (w.handle_event(event)) continue;
 			}
 			if (quit) break;
@@ -160,13 +153,13 @@ int main(int argc, char *argv[])
 			w.reshape(W, H);
 			GL_CHECK;
 	
-			if (w.animating() || renderer.wants_redraw() || gui.needs_redraw())
+			if (w.animating() || renderer.wants_redraw() || GUI::gui->needs_redraw())
 			{
 				w.animate();
 				GL_CHECK;
 				renderer.draw();
 				GL_CHECK;
-				gui.draw();
+				GUI::gui->draw();
 				GL_CHECK;
 				SDL_GL_SwapWindow(window);
 			}
