@@ -6,6 +6,7 @@
 GL_Program::~GL_Program()
 {
 	if (program) glDeleteProgram(program);
+	GL_CHECK;
 }
 
 void GL_Program::add_uniform(const char *type, const char *name)
@@ -138,10 +139,12 @@ void GL_Program::use(int i)
 
 	glUseProgram(program);
 	active = true;
+	GL_CHECK;
 }
 
 void GL_Program::finish()
 {
+	GL_CHECK;
 	assert(program && active);
 	glUseProgram(0);
 	active = false;
@@ -161,39 +164,47 @@ void GL_Program::uniform(int i, float value)
 {
 	INDEX_TX;
 	glUniform1f(i, value);
+	GL_CHECK;
 }
 void GL_Program::uniform(int i, int value)
 {
 	INDEX_TX;
 	glUniform1i(i, value);
+	GL_CHECK;
 }
 void GL_Program::uniform(int i, float v1, float v2)
 {
 	INDEX_TX;
 	glUniform2f(i, v1, v2);
+	GL_CHECK;
 }
 void GL_Program::uniform(int i, int   v1, int   v2)
 {
 	INDEX_TX;
 	glUniform2i(i, v1, v2);
+	GL_CHECK;
 }
 void GL_Program::uniform(int i, const M3d &mat)
 {
 	INDEX_TX;
 	glUniformMatrix3fv(i, 1, GL_TRUE, (float*)(M3f)mat);
+	GL_CHECK;
 }
 void GL_Program::uniform(int i, const M4d &mat)
 {
 	INDEX_TX;
 	glUniformMatrix4fv(i, 1, GL_TRUE, (float*)(M4f)mat);
+	GL_CHECK;
 }
 void GL_Program::uniform(int i, double v1, double v2)
 {
 	INDEX_TX;
 	glUniform2f(i, (float)v1, (float)v2);
+	GL_CHECK;
 }
 void GL_Program::uniform(int i, const GL_Color &c)
 {
 	INDEX_TX;
 	glUniform4fv(i, 1, c.v);
+	GL_CHECK;
 }

@@ -11,20 +11,24 @@
 #endif
 
 #include "GUI.h"
-#include "Window.h"
+#include "Document.h"
 #include "Utility/Preferences.h"
 #include "data.h"
 
 extern volatile bool quit;
 
 GUI *GUI::gui = NULL;
+bool GUI::visible = false;
+GUI::Page GUI::page = GUI::PREFERENCES;
+double GUI::tmp_N = 0.0;
+
 
 #ifdef LINUX
-GUI::GUI(SDL_Window* window, SDL_GLContext context, Window &w)
-: w(w)
+GUI::GUI(SDL_Window* window, SDL_GLContext context, Document &doc)
+: doc(doc)
 #else
-GUI::GUI(ANativeWindow *window, Window &w)
-: w(w)
+GUI::GUI(ANativeWindow *window, Document &doc)
+: doc(doc)
 , window(window)
 #endif
 {
@@ -68,8 +72,8 @@ GUI::~GUI()
 	#endif
 }
 
-void GUI::toggle() { visible = !visible; w.redraw(); }
-void GUI::close() { visible = false; w.redraw(); }
+void GUI::toggle() { visible = !visible; doc.redraw(3); }
+void GUI::close() { visible = false; doc.redraw(3); }
 
 void GUI::init_page()
 {
@@ -77,7 +81,7 @@ void GUI::init_page()
 	{
 		case PREFERENCES: break;
 		case SETTINGS:
-			tmp_N = w.doc.puzzle.N; break;
+			tmp_N = doc.puzzle.N; break;
 		default: assert(false);
 	}
 }
@@ -155,21 +159,14 @@ void GUI::draw()
 	#endif
 
 	ImGui::Render();
-	glUseProgram(0);
-	glDisable(GL_DEPTH_TEST);
-	#ifdef ANDROID
-	ImGuiIO &io = ImGui::GetIO();
-	glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
-	#endif
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-	if (need_redraw > 0) --need_redraw;
 }
 
 #ifdef LINUX
 bool GUI::handle_event(const SDL_Event &event)
 {
 	bool h = ImGui_ImplSDL2_ProcessEvent(&event);
-	if (visible && h) redraw();
+	if (visible && h) doc.redraw(3);
 	ImGuiIO &io = ImGui::GetIO();
 
 	bool activate = false, handled = false;
@@ -232,8 +229,7 @@ bool GUI::handle_event(const SDL_Event &event)
 				if (mods || ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId + ImGuiPopupFlags_AnyPopupLevel))
 					break;
 				visible = !visible;
-				redraw();
-				w.redraw();
+				doc.redraw(3);
 				return true;
 
 			case SDLK_q:
@@ -248,7 +244,7 @@ bool GUI::handle_event(const SDL_Event &event)
 			#ifdef DEBUG
 			case SDLK_d:
 				show_demo_window = !show_demo_window;
-				redraw();
+				doc.redraw(3);
 				return true;
 			#endif
 		}
@@ -257,7 +253,7 @@ bool GUI::handle_event(const SDL_Event &event)
 	if (activate)
 	{
 		visible = true;
-		redraw();
+		doc.redraw(3);
 	}
 
 	if (visible) switch (event.type)
@@ -276,7 +272,7 @@ bool GUI::handle_event(const SDL_Event &event)
 bool GUI::handle_touch(int ds, int n, int *id, float *x, float *y)
 {
 	if (!visible) return false;
-	redraw();
+	doc.redraw(3);
 	ImGuiIO &io = ImGui::GetIO();
 	if (n <= 0) { io.AddMouseButtonEvent(0, false); return true; }
 	// TODO: at least keep track of how many fingers are down

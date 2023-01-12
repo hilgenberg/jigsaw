@@ -6,15 +6,13 @@ class Window;
 class Renderer
 {
 public:
-	Renderer(Document &doc);
+	Renderer(Document &doc, Window &window);
 	~Renderer();
 	void draw();
-	void redraw() { want_redraw = true; }
-	bool wants_redraw() const { return want_redraw; }
 
 private:
 	Document &doc;
-	bool want_redraw = true;
+	Window   &window;
 	
 	#ifdef ANDROID
 	const EGLContext context; // which GL context do all our objects live in?
@@ -38,5 +36,4 @@ private:
 	GL_Program button_program;
 	GLuint button_VBO[2] = {0,0}, button_VAO[2] = {0,0};
 	GLuint button_texture = 0;
-
 };

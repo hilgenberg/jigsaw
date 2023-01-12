@@ -50,18 +50,22 @@ FF(void, reinit, jobject surface, jstring path)
 		bool ok = doc.load("///sample-data", 150);
 		assert(ok);
 	}
-	try { renderer = new Renderer(doc); } catch (...) { return; }
-	try { window = new Window(doc, *renderer); } catch (...) { delete renderer; renderer = NULL; return; }
+	try { window = new Window(doc); } catch (...) { return; }
+	try { renderer = new Renderer(doc, *window); } catch (...) { delete window; window = NULL; return; }
 
 	ANativeWindow *jwin = ANativeWindow_fromSurface(env, surface);
 	assert(jwin != NULL);
-	if (jwin) new GUI(jwin, *window); // d'tor will call ANativeWindow_release
+	if (jwin) new GUI(jwin, doc); // d'tor will call ANativeWindow_release
 	assert(GUI::gui != NULL);
 }
 
 F(void, pause)
 {
+	Preferences::flush();
+	Preferences::save_state(doc);
+
 	audio_pause();
+	delete GUI::gui;
 }
 
 FF(jboolean, setImage, jstring path)
@@ -73,12 +77,6 @@ FF(jboolean, setImage, jstring path)
 	return ok;
 }
 
-F(void, save)
-{
-	Preferences::flush();
-	Preferences::save_state(doc);
-}
-
 FF(void, resize, jint w, jint h)
 {
 	if (!renderer) return;
@@ -88,10 +86,8 @@ FF(void, resize, jint w, jint h)
 F(jboolean, draw)
 {
 	if (!renderer) return false;
-	window->animate();
 	renderer->draw();
-	if (GUI::gui) GUI::gui->draw();
-	return window->animating() || (GUI::gui && GUI::gui->needs_redraw());
+	return doc.needs_redraw();
 }
 
 FF(void, touchUni, jint ds, jint id, jfloat x, jfloat y)

@@ -48,7 +48,6 @@ public:
 
 	void view_box(double x0, double x1, double y0, double y1, double factor = 1.0)
 	{
-		LOG_DEBUG("Box %f %f %f %f - %f", x0, x1, y0, y1, factor);
 		center.set((x0+x1)*0.5, (y0+y1)*0.5);
 	#if 0
 		// this makes it fit, no matter how the window gets resized:

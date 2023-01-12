@@ -3,9 +3,8 @@
 #include "Audio.h"
 #include "Puzzle_Tools.h"
 
-Window::Window(Document &doc, Renderer &renderer)
+Window::Window(Document &doc)
 : doc(doc)
-, renderer(renderer)
 {
 }
 
@@ -76,12 +75,12 @@ void Window::handle_touch(int ds, int n, int *id, float *x, float *y, std::funct
 						auto &G = doc.puzzle.groups[doc.puzzle.g[dragging]];
 						magnetized.insert(G.begin(), G.end());
 					}
-					redraw();
+					doc.redraw();
 					break;
 				case Tool::NONE:
 					dragging = hit_test(ScreenCoords(*x, *y), true);
 					if (dragging < 0) break;
-					redraw();
+					doc.redraw();
 					break;
 			}
 		}
@@ -115,7 +114,7 @@ void Window::handle_touch(int ds, int n, int *id, float *x, float *y, std::funct
 
 		if (va) return;
 
-		redraw();
+		doc.redraw();
 
 		if (pointer_state.size() == 1)
 		{

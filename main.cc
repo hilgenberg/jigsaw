@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  8);
 	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-	SDL_Window* window = SDL_CreateWindow("Puzzle", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+	SDL_Window* window = SDL_CreateWindow("Jigsaw Puzzle", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
 	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
 	SDL_GL_MakeCurrent(window, gl_context);
 	SDL_GL_SetSwapInterval(1);
@@ -129,9 +129,9 @@ int main(int argc, char *argv[])
 		if (n > 0) Preferences::pieces(n);
 
 		GL_CHECK;
-		Renderer renderer(doc);
-		Window w(window, doc, renderer);
-		new GUI(window, gl_context, w);
+		Window w(window, doc);
+		Renderer renderer(doc, w);
+		new GUI(window, gl_context, doc);
 
 		GL_CHECK;
 
@@ -153,14 +153,9 @@ int main(int argc, char *argv[])
 			w.reshape(W, H);
 			GL_CHECK;
 	
-			if (w.animating() || renderer.wants_redraw() || GUI::gui->needs_redraw())
+			if (doc.needs_redraw())
 			{
-				w.animate();
-				GL_CHECK;
 				renderer.draw();
-				GL_CHECK;
-				GUI::gui->draw();
-				GL_CHECK;
 				SDL_GL_SwapWindow(window);
 			}
 			else
@@ -182,6 +177,7 @@ int main(int argc, char *argv[])
 		retcode = 2;
 	}
 
+	delete GUI::gui;
 	SDL_GL_DeleteContext(gl_context);
 	SDL_DestroyWindow(window);
 	SDL_Quit();

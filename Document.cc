@@ -25,7 +25,7 @@ bool Document::load(const std::string &p, int N)
 	reset_view(puzzle, camera);
 	return true;
 }
-bool Document::reset_N(int N)
+bool Document::load(int N)
 {
 	puzzle.reset(puzzle.im.w(), puzzle.im.h(), N);
 	puzzle.shuffle(false);

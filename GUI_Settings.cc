@@ -1,14 +1,16 @@
 #include "GUI.h"
-#include "Window.h"
 
 static constexpr int slider_flags = ImGuiSliderFlags_AlwaysClamp|ImGuiSliderFlags_NoRoundToFormat|ImGuiSliderFlags_NoInput;
 
 void GUI::p_settings()
 {
-	double m = 20.0, M = Preferences::Nmax();
+	static bool applied = true;
+
+	double m = 20.0, M = Preferences::Nmax(), orig = tmp_N;
 	if (tmp_N < m) tmp_N = m;
 	if (tmp_N > M) tmp_N = M;
 	ImGui::SliderScalar("##N", ImGuiDataType_Double, &tmp_N, &m, &M, "%.0f Pieces", slider_flags);
+	if (tmp_N != orig) applied = false;
 
 #define CHKBOOL(g, title, value, action) do{\
 	bool on_ = (g), orig = on_ && value, tmp = orig;\
@@ -40,18 +42,18 @@ void GUI::p_settings()
 	if (enable && tmp != orig) w.action(tmp); }while(0)
 
 
-
 	bool apply_ = false, close_ = false;
-	if (ImGui::Button("OK", ImVec2(ImGui::GetContentRegionAvail().x*0.33,0))) apply_ = close_ = true;
+	if (ImGui::Button("OK", ImVec2(ImGui::GetContentRegionAvail().x*0.33,0))) { apply_ = !applied; close_ = true; }
 	ImGui::SameLine();
-	if (ImGui::Button("Apply", ImVec2(ImGui::GetContentRegionAvail().x*0.5,0))) apply_ = true;
+	if (ImGui::Button(applied ? "Reset" : "Apply", ImVec2(ImGui::GetContentRegionAvail().x*0.5,0))) apply_ = true;
 	ImGui::SameLine();
 	if (ImGui::Button("Close", ImVec2(ImGui::GetContentRegionAvail().x,0))) close_ = true;
 
 	if (apply_)
 	{
-		w.doc.reset_N((int)tmp_N);
-		w.redraw();
+		doc.load((int)tmp_N);
+		doc.redraw();
+		applied = true;
 	}
 	if (close_) close();
 }

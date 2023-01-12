@@ -11,7 +11,7 @@ static bool have_changes = false; // were any defaults changed?
 #ifdef LINUX
 static std::string image_;
 static int         pieces_         = 256;
-#define DEFAULT_FINGER 20.0f
+#define DEFAULT_FINGER 0.0f
 #else
 #define DEFAULT_FINGER 60.0f
 #endif
@@ -32,7 +32,7 @@ void reset_all()
 {
 	#ifdef LINUX
 	pieces_         = 256;
-	image_.clear();
+	image_          .clear();
 	#endif
 	edge_           = Regular;
 	Nmax_           = 1000;
@@ -57,52 +57,39 @@ namespace Preferences
 		p /= "state.bin";
 
 		FILE *F = fopen(p.c_str(), "w");
-		if (!F)
-		{
-			LOG_ERROR("cannot write to savegame file %s", p.c_str());
-			return false;
-		}
+		if (!F) { LOG_ERROR("cannot write to savegame file %s", p.c_str()); return false; }
 
-		try
+		bool ok = true; try
 		{
 			FileWriter fw(F);
 			Serializer s(fw);
 			doc.save(s);
 		}
-		catch (...)
-		{
-			fclose(F);
-			return false;
-		}
+		catch (...) { LOG_ERROR("Error writing savegame %s!", p.c_str()); ok = false; }
 		fclose(F);
-		return true;
+		return ok;
+
+
 	}
 
 	bool load_state(Document &doc)
 	{
 		std::filesystem::path p = directory(); p /= "state.bin";
 		if (!is_regular_file(p)) return false;
+		
 		FILE *F = fopen(p.c_str(), "r");
-		if (!F)
-		{
-			LOG_ERROR("cannot read from savegame file %s", p.c_str());
-			return false;
-		}
-		try
+		if (!F) { LOG_ERROR("cannot read from savegame file %s", p.c_str()); return false; }
+		
+		bool ok = true; try
 		{
 			FileReader fr(F);
 			Deserializer s(fr);
 			doc.load(s);
 			assert(s.done());
 		}
-		catch (...)
-		{
-			fclose(F);
-			LOG_ERROR("Error reading savegame %s!", p.c_str());
-			return false;
-		}
+		catch (...) { LOG_ERROR("Error reading savegame %s!", p.c_str()); ok = false; }
 		fclose(F);
-		return true;
+		return ok;
 	}
 
 	#ifdef ANDROID

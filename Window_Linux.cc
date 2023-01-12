@@ -17,10 +17,9 @@ extern volatile bool quit;
 
 static inline double absmax(double a, double b){ return fabs(a) > fabs(b) ? a : b; }
 
-Window::Window(SDL_Window* window, Document &doc, Renderer &renderer)
+Window::Window(SDL_Window* window, Document &doc)
 : window(window)
 , doc(doc)
-, renderer(renderer)
 {
 }
 
@@ -39,7 +38,7 @@ bool Window::handle_event(const SDL_Event &e)
 			case SDL_WINDOWEVENT_SHOWN:
 			case SDL_WINDOWEVENT_EXPOSED:
 			case SDL_WINDOWEVENT_RESTORED:
-				redraw();
+				doc.redraw();
 				return true;
 		}
 		return false;
@@ -85,12 +84,12 @@ bool Window::handle_event(const SDL_Event &e)
 						auto &G = doc.puzzle.groups[doc.puzzle.g[dragging]];
 						magnetized.insert(G.begin(), G.end());
 					}
-					redraw();
+					doc.redraw();
 					break;
 				case Tool::NONE:
 					dragging = hit_test(ScreenCoords(e.button.x, e.button.y), true);
 					if (dragging < 0) break;
-					redraw();
+					doc.redraw();
 					break;
 			}
 			return true;
@@ -113,7 +112,7 @@ bool Window::handle_event(const SDL_Event &e)
 			{
 				drag_tool(doc.puzzle, doc.camera, dragging, magnetized, drag_rel, ScreenCoords(e.motion.x, e.motion.y), drag_v, dx, dy);
 				if (drag_v.absq() > 1e-12) start_animations();
-				redraw();
+				doc.redraw();
 				return true;
 			}
 
@@ -127,7 +126,7 @@ bool Window::handle_event(const SDL_Event &e)
 			if (doc.tool == Tool::SHOVEL || (alt && !ctrl && !shift))
 			{
 				shovel_tool(doc.puzzle, doc.camera, ScreenCoords(e.motion.x, e.motion.y), ScreenCoords(dx, dy));
-				redraw();
+				doc.redraw();
 				return true;
 			}
 			
@@ -140,7 +139,7 @@ bool Window::handle_event(const SDL_Event &e)
 			doc.camera.move(doc.camera.dconvert(ScreenCoords(-dx, -dy)));
 			doc.camera.zoom(exp(-dz * 0.02));
 
-			redraw();
+			doc.redraw();
 			return true;
 		}
 		case SDL_MOUSEWHEEL:
@@ -164,7 +163,7 @@ bool Window::handle_event(const SDL_Event &e)
 				doc.camera.move(doc.camera.dconvert(ScreenCoords(dx, dy)*10.0));
 				doc.camera.zoom(exp(-dz * 0.02), ScreenCoords(mx, my));
 
-				redraw();
+				doc.redraw();
 
 				if (dragging >= 0)
 					drag_tool(doc.puzzle, doc.camera, dragging, magnetized, drag_rel, ScreenCoords(mx, my), drag_v);
@@ -175,7 +174,7 @@ bool Window::handle_event(const SDL_Event &e)
 				(void)SDL_GetMouseState(&mx, &my);
 				double dx = -5.0*e.wheel.x, dy = -5.0*e.wheel.y;
 				doc.camera.zoom(exp(-(dx+dy) * 0.02), ScreenCoords(mx, my));
-				redraw();
+				doc.redraw();
 			}
 			return true;
 		}
@@ -208,12 +207,10 @@ bool Window::handle_key(SDL_Keysym keysym, bool release)
 		case SDLK_SPACE:
 			if (ctrl) arrange(doc.puzzle, false);
 			else reset_view(doc.puzzle, doc.camera);
-			redraw();
 			start_animations();
 			return true;
 		case SDLK_e:
 			arrange(doc.puzzle, true);
-			redraw();
 			start_animations();
 			return true;
 		#ifdef DEBUG

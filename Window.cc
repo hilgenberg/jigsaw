@@ -9,7 +9,6 @@
 #include "Utility/Preferences.h"
 #include "Victory.h"
 #include "Puzzle_Tools.h"
-#include "Renderer.h"
 #include "GUI.h"
 
 #ifdef LINUX
@@ -17,9 +16,7 @@ extern volatile bool quit;
 static inline double absmax(double a, double b){ return fabs(a) > fabs(b) ? a : b; }
 #endif
 
-void Window::redraw() { renderer.redraw(); }
-
-void Window::start_animations() { if (!anim) { last_frame = now(); anim = true; } }
+void Window::start_animations() { if (!anim) { last_frame = now(); anim = true; doc.redraw(); } }
 
 void Window::animate()
 {
@@ -32,7 +29,7 @@ void Window::animate()
 	if (va)
 	{
 		va->run(dt);
-		if (!va->done()) { redraw(); return; }
+		if (!va->done()) { doc.redraw(); return; }
 		va = nullptr;
 		play_click();
 	}
@@ -82,8 +79,6 @@ void Window::animate()
 	doc.camera.move(doc.camera.dconvert(ScreenCoords(dx, dy)));
 	doc.camera.zoom(exp(-dz * 0.02));
 
-	redraw();
-
 	if (dragging >= 0)
 	{
 		// keep the piece where it is, relative to the mouse cursor
@@ -103,6 +98,10 @@ void Window::animate()
 	{
 		anim = false;
 	}
+	else
+	{
+		doc.redraw();
+	}
 }
 
 void Window::button_action(ButtonAction a)
@@ -120,7 +119,7 @@ void Window::button_action(ButtonAction a)
 		case MAGNET: doc.tool = (doc.tool==Tool::MAGNET ? Tool::NONE : Tool::MAGNET); break;
 		default: return;
 	}
-	redraw();
+	doc.redraw();
 }
 
 void Window::reshape(int w, int h)
@@ -129,7 +128,7 @@ void Window::reshape(int w, int h)
 	if (w == c.screen_w() && h == c.screen_h()) return;
 	doc.camera.viewport(w, h);
 	doc.buttons.reshape(doc.camera);
-	redraw();
+	doc.redraw();
 }
 
 int Window::hit_test(const ScreenCoords &p, bool pick_up)
@@ -167,5 +166,5 @@ void Window::drop()
 	dragging = -1;
 	drag_v.clear();
 	magnetized.clear();
-	redraw();
+	doc.redraw();
 }

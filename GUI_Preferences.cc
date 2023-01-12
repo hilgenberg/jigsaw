@@ -1,6 +1,4 @@
 #include "GUI.h"
-#include "imgui/imgui.h"
-#include "Window.h"
 #include "Utility/Preferences.h"
 #include "data.h"
 
@@ -45,7 +43,7 @@ void GUI::p_preferences()
 
 	GL_Color orig = Preferences::bg_color(), tmp = orig;
 	ImGui::ColorEdit4("Background Color", tmp.v, colorEditFlags);
-	if (tmp != orig) { Preferences::bg_color(tmp); w.redraw(); }
+	if (tmp != orig) { Preferences::bg_color(tmp); doc.redraw(); }
 
 	b0 = Preferences::spiral(); b = b0;
 	ImGui::Checkbox("Spiral Arrange", &b);
@@ -60,14 +58,14 @@ void GUI::p_preferences()
 	if (f != f0)
 	{
 		Preferences::button_scale(f);
-		w.doc.buttons.reshape(w.doc.camera);
+		doc.buttons.reshape(doc.camera);
 	}
 	
 	//ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x*0.5f);
 	static const char *button_edges[] = {"Left", "Right", "Top", "Bottom"};
 	i = i0 = Preferences::button_edge();
 	ImGui::Combo("##Button Placement", &i, button_edges, 4);
-	if (i != i0) { Preferences::button_edge((ScreenEdge)i); w.doc.buttons.reshape(w.doc.camera); }
+	if (i != i0) { Preferences::button_edge((ScreenEdge)i); doc.buttons.reshape(doc.camera); }
 	bool button_v = (i == LEFT || i == RIGHT);
 	
 	//ImGui::SameLine();
@@ -76,7 +74,7 @@ void GUI::p_preferences()
 	static const char *button_align_v[] = {"Top", "Center", "Bottom"};
 	i = i0 = Preferences::button_align();
 	ImGui::Combo("##Button Alignment", &i, button_v ? button_align_v : button_align_h, 3);
-	if (i != i0) { Preferences::button_align((ScreenAlign)i); w.doc.buttons.reshape(w.doc.camera); }
+	if (i != i0) { Preferences::button_align((ScreenAlign)i); doc.buttons.reshape(doc.camera); }
 
 	SPC;
 

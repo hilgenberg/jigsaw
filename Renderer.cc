@@ -3,10 +3,13 @@
 #include "Utility/GL_Util.h"
 #include "data.h"
 #include "shaders.h"
+#include "Window.h"
+#include "GUI.h"
 static constexpr int MAX_BUTTONS = N_BUTTON_IMAGES;
 
-Renderer::Renderer(Document &doc)
+Renderer::Renderer(Document &doc, Window &window)
 : doc(doc)
+, window(window)
 #ifdef ANDROID
 , context(eglGetCurrentContext())
 #endif
@@ -147,10 +150,12 @@ Renderer::Renderer(Document &doc)
 
 void Renderer::alloc_puzzle(bool free_old_buffers)
 {
+	GL_CHECK;
 	if (free_old_buffers)
 	{
 		glDeleteVertexArrays(2, VAO);
 		glDeleteBuffers(2, VBO);
+		GL_CHECK;
 	}
 
 	const int N = doc.puzzle.N;
@@ -360,11 +365,14 @@ void Renderer::draw_buttons()
 
 void Renderer::draw()
 {
-	want_redraw = false;
-
 	#ifdef ANDROID
 	if (eglGetCurrentContext() != context) return;
 	#endif
+
+	GL_CHECK;
+	doc.draw();
+	window.animate();
+	GL_CHECK;
 
 	const int N = doc.puzzle.N;
 	if (current_N < N || (current_N > N+100 && current_N > N*1.5))
@@ -390,6 +398,8 @@ void Renderer::draw()
 	draw_puzzle();
 	GL_CHECK;
 	draw_buttons();
+	GL_CHECK;
+	if (GUI::gui) GUI::gui->draw();
 	GL_CHECK;
 
 	++current_buf; current_buf %= 2;
