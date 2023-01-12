@@ -42,7 +42,7 @@ Puzzle::Piece Puzzle::hit_test(const PuzzleCoords &p, const PuzzleCoords &radius
 
 	for (int j = N-1; j >= 0; --j)
 	{
-		const int i = z[j];
+		const int i = z[j]; if (is_fixed(i)) continue;
 		const double px = pos[i].x, py = pos[i].y;
 		if (x < px-d || x > px+1.0+d || y < py-d || y > py+1.0+d) continue;
 		
@@ -129,7 +129,7 @@ Puzzle::Piece Puzzle::hit_test(const PuzzleCoords &p, const PuzzleCoords &radius
 
 	for (int j = N-1; j >= 0; --j)
 	{
-		const int i = z[j];
+		const int i = z[j]; if (is_fixed(i)) continue;
 		const double px = pos[i].x, py = pos[i].y;
 		
 		//if (!ellipse_vs_rect(radius, P2d(x-px-0.5, y-py-0.5), 0.5+d, 0.5+d)) continue;

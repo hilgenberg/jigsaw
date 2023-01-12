@@ -171,48 +171,19 @@ void Puzzle::pick_up(Piece i)
 {
 	assert(i >= 0 && i < N);
 
-	bool is_final = (Preferences::absolute_mode() || is_big_border_group(i)) && delta(i).absq() < 1e-12;
-
 	if (g[i] < 0)
 	{
-		if (is_final && z[0] == i) return;
 		auto it = std::remove(z.begin(), z.end(), i);
 		assert(it == z.begin()+N-1);
-		if (!is_final)
-		{
-			z[N-1] = i;
-		}
-		else
-		{
-			for (int j = N-1; j > 0; --j) z[j] = z[j-1];
-			z[0] = i;
-		}
+		z[N-1] = i;
 	}
 	else
 	{
 		auto &G = groups[g[i]];
-		if (is_final)
-		{
-			bool all_good = true; // is the entire group at bottom already?
-			for (int i = 0; i < (int)G.size(); ++i)
-			{
-				if (G.count(z[i])) continue;
-				all_good = false;
-				break;
-			}
-			if (all_good) return;
-		}
-
 		auto it = std::remove_if(z.begin(), z.end(), [&G](Piece p){ return G.count(p) > 0; });
 		assert(it == z.begin()+N-G.size());
 		int i = N-G.size();
-		if (is_final)
-		{
-			while (--i >= 0) z[i+G.size()] = z[i];
-			i = 0;
-		}
 		for (Piece j : G) z[i++] = j;
-
 	}
 
 	sanity_checks();
@@ -273,12 +244,12 @@ void Puzzle::animate(double dt)
 	}
 }
 
-bool Puzzle::connect(Piece i, double delta_max)
+bool Puzzle::drop(Piece i, double delta_max)
 {
 	assert(i >= 0 && i < N);
 	assert(!animations.count(i));
 
-	bool snap = (Preferences::absolute_mode() && delta(i).absq() > 1e-12 && align(i, delta_max));
+	bool snap = ((Preferences::absolute_mode() || is_corner_group(i)) && delta(i).absq() > 1e-12 && align(i, delta_max));
 
 	if (snap) move(i, P2d(i%W - 0.5*W,i/W - 0.5*H), false);
 
@@ -301,7 +272,11 @@ bool Puzzle::connect(Piece i, double delta_max)
 		if (y < H-1 && g[i] != g[j+W] && align(j, j+W, delta_max)) adding.insert(j+W);
 	}
 
-	if (adding.empty()) return snap;
+	if (adding.empty())
+	{
+		zsort();
+		return snap;
+	}
 
 	do {
 		adding.insert(i);
@@ -364,44 +339,48 @@ bool Puzzle::connect(Piece i, double delta_max)
 
 	while (groups.back().empty()) groups.pop_back();
 
-	pick_up(i);
+	zsort();
 
 	sanity_checks();
 
 	return true;
 }
 
-bool Puzzle::is_big_border_group(Piece i) const
-{
-	// big border group = group containing more than half the edge pieces
-	if (i < 0 || i >= N) return false;
-	if (g[i] < 0 || groups[g[i]].size() <= W+H-1) return false; // wrong for W or H == 1, but that's ok
-	// total size is not enough - we need to count the number of border pieces:
-	auto &G = groups[g[i]]; int n = 0;
-	for (int x = 0; x < W; ++x)
-	{
-		if (G.count(x)) ++n;
-		if (G.count(W*(H-1)+x)) ++n;
-	}
-	for (int y = 1; y < H-1; ++y)
-	{
-		if (G.count(W*y)) ++n;
-		if (G.count(W*y+W-1)) ++n;
-	}
-	return n > W+H-1;
-}
-
-bool Puzzle::connect(std::set<Piece> &I, double delta_max)
+bool Puzzle::drop(std::set<Piece> &I, double delta_max)
 {
 	bool ret = false;
 	while (!I.empty())
 	{
 		auto i = *I.begin();
-		ret |= connect(i, delta_max);
+		ret |= drop(i, delta_max);
 		if (g[i] < 0) I.erase(i); else for (Piece j : groups[g[i]]) I.erase(j);
 	}
 	return false;
 }
+
+void Puzzle::zsort()
+{
+	std::stable_sort(z.begin(), z.end(), [this](Piece a, Piece b)
+	{
+		// return true if a strictly lower than b:
+
+		// snapped pieces go below all others
+		bool sa = is_snapped(a), sb = is_snapped(b);
+		if (sa != sb) return sa;
+		if (sa) return false;
+		assert(!sa && !sb);
+
+		// single pieces go above all groups
+		if (g[b] < 0) return g[a] >= 0;
+		if (g[a] < 0) return false;
+		assert(g[a] >= 0 && g[b] >= 0);
+
+		// bigger groups go below smaller groups
+		size_t na = groups[g[a]].size(), nb = groups[g[b]].size();
+		return na > nb;
+	});
+}
+
 void Puzzle::magnetize(std::set<Piece> &I0, PuzzleCoords dp)
 {
 	// move the existing pieces
@@ -421,8 +400,8 @@ void Puzzle::magnetize(std::set<Piece> &I0, PuzzleCoords dp)
 		for (int j = 0; j < N; ++j)
 		{
 			if (I0.count(j)) continue;
+			if (is_snapped(j)) continue;
 			if (!overlap(i,j)) continue;
-			if ((Preferences::absolute_mode() && delta(j).absq() < 1e-12) || is_big_border_group(j)) continue;
 			if (g[j] < 0) { I0.insert(j); I.insert(j); pick_up(j); } else
 			for (Piece k : groups[g[j]]) { I0.insert(k); I.insert(k); pick_up(k); }
 		}

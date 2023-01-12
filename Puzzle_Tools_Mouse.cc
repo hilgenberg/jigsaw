@@ -76,7 +76,7 @@ bool drag_tool_drop(Puzzle &puzzle, Camera &camera, Puzzle::Piece piece, std::se
 {
 	if (piece < 0 || piece >= puzzle.N) return false;
 	auto delta = std::max(5.0*camera.pixel_size(), 0.3);
-	return magnet.empty() ? puzzle.connect(piece, delta) : puzzle.connect(magnet, delta);
+	return magnet.empty() ? puzzle.drop(piece, delta) : puzzle.drop(magnet, delta);
 }
 
 //-----------------------------------------------------------------------------

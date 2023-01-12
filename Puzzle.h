@@ -36,7 +36,7 @@ struct Puzzle : public Serializable
 	typedef uint8_t Border;
 	int W = 0, H = 0, N = 0; // number of pieces in x and y directions, N = W*H is total
 	std::vector<PuzzleCoords>  pos; // positions of the pieces (top-left corner, size is (1,1))
-	std::vector<Piece>  z; // draw in order z[0], z[1], ...
+	std::vector<Piece>  z; // draw in order z[0], z[1], ... (=> z[0] is bottom-most piece, z[N-1] top one)
 	std::vector<Group>  g; // which group is the piece in? -1 for none
 	std::vector<std::set<Piece>> groups; // luxury item, simplifies the algorithms
 	std::vector<bool> eh, ev; // horizontal and vertical edges, true = knob points away from zero
@@ -52,11 +52,11 @@ struct Puzzle : public Serializable
 	inline PuzzleCoords from_camera(const CameraCoords &p) const { return PuzzleCoords(p.x/sx, p.y/sy); }
 	
 	void  move(Piece i, const PuzzleCoords &p, bool animate);
-	bool  connect(Piece i, double delta_max); // returns true for new connections
+	bool  drop(Piece i, double delta_max); // returns true for new connections
 	void  pick_up(Piece i); // move to top of z-order (i.e. to end of z vector)
 	void  magnetize(std::set<Piece> &I, PuzzleCoords dp); // recursively puts all touching pieces into magnet
-	bool  connect(std::set<Piece> &I, double delta_max); // returns true for new connections
-	Piece hit_test(const PuzzleCoords &p, const PuzzleCoords &radius, PuzzleCoords &rel) const;
+	bool  drop(std::set<Piece> &I, double delta_max); // returns true for new connections
+	Piece hit_test(const PuzzleCoords &p, const PuzzleCoords &radius, PuzzleCoords &rel) const; // skips all pieces with is_fixed(i)!
 
 	inline bool align(Piece i, Piece j, double delta_max) const // should they get connected?
 	{
@@ -87,6 +87,18 @@ struct Puzzle : public Serializable
 		       fabs(d.y) < delta_max*sy;
 	}
 
+	inline bool is_fixed(Piece i) const
+	{
+		assert(i >= 0 && i < N);
+		return Preferences::absolute_mode() && delta(i).absq() < 1e-12;
+	}
+
+	inline bool is_snapped(Piece i) const
+	{
+		assert(i >= 0 && i < N);
+		return (Preferences::absolute_mode() || is_corner_group(i)) && delta(i).absq() < 1e-12;
+	}
+
 	inline bool should_arrange(Piece i) const
 	{
 		return g[i] < 0 && !(Preferences::absolute_mode() && delta(i).absq() < 1e-12);
@@ -113,11 +125,22 @@ struct Puzzle : public Serializable
 		int x = i % W, y = i / W;
 		return x == 0 || x == W-1 || y == 0 || y == H-1;
 	}
+	bool is_corner(Piece i) const
+	{
+		assert(i >= 0 && i < N);
+		//return i == 0 || i == W-1 || i == N-W || i == N-1;
+		return i % W % (W-1) + i / W % (H-1) == 0;
+	}
+	bool is_corner_group(Piece i) const
+	{
+		assert(i >= 0 && i < N);
+		if (is_corner(i)) return true;
+		if (g[i] < 0) return false;
+		return g[i] == g[0] || g[i] == g[W-1] || g[i] == g[N-W] || g[i] == g[N-1];
+	}
 
-	bool is_big_border_group(Piece i) const;
-
-	// returns CameraCoords
 	void bbox(double &x0, double &x1, double &y0, double &y1, bool groups_only = false) const
+	// ignores prior values of xi/yi and returns CameraCoords!
 	{
 		int i = 0;
 		if (groups_only) while (i < N && g[i] < 0) ++i;
@@ -138,6 +161,8 @@ struct Puzzle : public Serializable
 		x0 *= sx; x1 *= sx;
 		y0 *= sy; y1 *= sy;
 	}
+
+	void zsort(); // make sure single pieces don't get lost under big groups
 
 	void sanity_checks() const
 	{
