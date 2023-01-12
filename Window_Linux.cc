@@ -17,9 +17,10 @@ extern volatile bool quit;
 
 static inline double absmax(double a, double b){ return fabs(a) > fabs(b) ? a : b; }
 
-Window::Window(SDL_Window* window, Document &doc)
+Window::Window(SDL_Window* window, Document &doc, GUI &gui)
 : window(window)
 , doc(doc)
+, gui(gui)
 {
 }
 
@@ -195,7 +196,7 @@ bool Window::handle_key(SDL_Keysym keysym, bool release)
 
 	if (!release) switch (key)
 	{
-		case SDLK_ESCAPE: GUI::Toggle(); return true;
+		case SDLK_ESCAPE: gui.toggle(); return true;
 
 		case SDLK_LEFT: case SDLK_RIGHT:
 		case SDLK_UP:   case SDLK_DOWN:

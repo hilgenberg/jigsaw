@@ -112,8 +112,8 @@ void Window::button_action(ButtonAction a)
 		case EDGE_ARRANGE: arrange(doc.puzzle, true);  start_animations(); break;
 		case RESET_VIEW:   reset_view(doc.puzzle, doc.camera); break;
 		case CHANGE_IMAGE: break;
-		case SETTINGS:     GUI::Show(GUI::SETTINGS); break;
-		case PREFERENCES:  GUI::Show(GUI::PREFERENCES); break;
+		case SETTINGS:     gui.show(GUI::SETTINGS); break;
+		case PREFERENCES:  gui.show(GUI::PREFERENCES); break;
 		case HIDE:   doc.tool = (doc.tool==Tool::HIDE   ? Tool::NONE : Tool::HIDE);   break;
 		case SHOVEL: doc.tool = (doc.tool==Tool::SHOVEL ? Tool::NONE : Tool::SHOVEL); break;
 		case MAGNET: doc.tool = (doc.tool==Tool::MAGNET ? Tool::NONE : Tool::MAGNET); break;

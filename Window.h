@@ -4,19 +4,20 @@
 #ifdef LINUX
 #include <SDL_events.h>
 #endif
+class GUI;
 
 class Window 
 {
 public:
 	#ifdef LINUX
-	Window(SDL_Window* window, Document &doc);
+	Window(SDL_Window* window, Document &doc, GUI &gui);
 	bool handle_event(const SDL_Event &event);
 	bool handle_key(SDL_Keysym key, bool release);
 	bool handle_button_event(const SDL_Event &event);
 	#endif
 
 	#ifdef ANDROID
-	Window(Document &doc);
+	Window(Document &doc, GUI &gui);
 	// ds is  1: touch down, -1: touch lifted, 0: movement
 	// special case ds == -1, n == 0: lift all / cancel gesture
 	void handle_touch(int ds, int n, int *id, float *x, float *y, std::function<void(ButtonAction)> button_callback);
@@ -29,6 +30,7 @@ public:
 
 private:
 	Document     &doc;
+	GUI          &gui;
 	bool          anim = false;
 	double        last_frame = -1.0; // time of last animate() call
 

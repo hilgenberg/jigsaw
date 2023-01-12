@@ -3,8 +3,9 @@
 #include "Audio.h"
 #include "Puzzle_Tools.h"
 
-Window::Window(Document &doc)
+Window::Window(Document &doc, GUI &gui)
 : doc(doc)
+, gui(gui)
 {
 }
 

@@ -129,9 +129,9 @@ int main(int argc, char *argv[])
 		if (n > 0) Preferences::pieces(n);
 
 		GL_CHECK;
-		Window w(window, doc);
-		Renderer renderer(doc, w);
-		new GUI(window, gl_context, doc);
+		GUI      gui(doc);
+		Window   w(window, doc, gui);
+		Renderer renderer(doc, w, gui, window, gl_context);
 
 		GL_CHECK;
 
@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
 			SDL_Event event;
 			while (!quit && SDL_PollEvent(&event))
 			{
-				if (GUI::gui->handle_event(event)) continue;
+				if (gui.handle_event(event)) continue;
 				if (w.handle_event(event)) continue;
 			}
 			if (quit) break;
@@ -177,7 +177,6 @@ int main(int argc, char *argv[])
 		retcode = 2;
 	}
 
-	delete GUI::gui;
 	SDL_GL_DeleteContext(gl_context);
 	SDL_DestroyWindow(window);
 	SDL_Quit();

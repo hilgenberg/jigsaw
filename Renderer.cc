@@ -5,13 +5,31 @@
 #include "shaders.h"
 #include "Window.h"
 #include "GUI.h"
+#include "imgui/imgui.h"
+
+#ifdef LINUX
+#include "imgui/backends/imgui_impl_sdl.h"
+#include "imgui/backends/imgui_impl_opengl3.h"
+#else
+#include <android/native_window_jni.h>
+#include "imgui/backends/imgui_impl_android.h"
+#define IMGUI_IMPL_OPENGL_ES3
+#include "imgui/backends/imgui_impl_opengl3.h"
+#endif
+
 static constexpr int MAX_BUTTONS = N_BUTTON_IMAGES;
 
-Renderer::Renderer(Document &doc, Window &window)
+#ifdef LINUX
+Renderer::Renderer(Document &doc, Window &window, GUI &gui, SDL_Window *sdl_window, SDL_GLContext sdl_context)
+#else
+Renderer::Renderer(Document &doc, Window &window, GUI &gui, ANativeWindow *jni_window)
+#endif
 : doc(doc)
 , window(window)
+, gui(gui)
 #ifdef ANDROID
 , context(eglGetCurrentContext())
+, jni_window(jni_window)
 #endif
 {
 	#ifdef ANDROID
@@ -144,9 +162,42 @@ Renderer::Renderer(Document &doc, Window &window)
 		GL_CHECK;
 	}
 
-	glBindVertexArray(0); 
-}
+	glBindVertexArray(0);
 
+	//----------------------------------------------------------------------------
+	// Dear ImGui setup
+	//----------------------------------------------------------------------------
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO &io = ImGui::GetIO();
+	io.ConfigInputTextCursorBlink = false;
+	io.ConfigInputTrickleEventQueue = false;
+	io.IniFilename = NULL;
+	#ifdef LINUX
+	ImGui_ImplSDL2_InitForOpenGL(sdl_window, sdl_context);
+	ImGui_ImplOpenGL3_Init();
+	float font_size = 18.0f;
+	#else
+	ImGui_ImplAndroid_Init(jni_window);
+	ImGui_ImplOpenGL3_Init("#version 300 es");
+	ImGui::GetStyle().ScaleAllSizes(3.0f); // FIXME: Put some effort into DPI awareness
+	float font_size = 42.0f;
+	#endif
+
+	ImFontConfig fc; fc.FontDataOwnedByAtlas = false;
+	static const ImWchar ranges[] = { 0x0001, 0xFFFF, 0 }; // get all
+	io.Fonts->AddFontFromMemoryTTF((void *)font_data, (int)font_data_len, font_size, &fc, ranges);
+
+	auto &style = ImGui::GetStyle();
+	style.FrameRounding = 3.0f;
+	style.WindowRounding = 5.0f;
+	//style.ChildRounding = 5.0f;
+	#ifdef ANDROID
+	style.FrameRounding *= 3.0f;
+	style.WindowRounding *= 3.0f;
+	#endif
+}
 
 void Renderer::alloc_puzzle(bool free_old_buffers)
 {
@@ -184,6 +235,16 @@ void Renderer::alloc_puzzle(bool free_old_buffers)
 
 Renderer::~Renderer()
 {
+	#ifdef LINUX
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplSDL2_Shutdown();
+	#else
+	if (eglGetCurrentContext() == context) ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplAndroid_Shutdown();
+	ANativeWindow_release(jni_window);
+	#endif
+	ImGui::DestroyContext();
+
 	#ifdef ANDROID
 	if (eglGetCurrentContext() != context)
 	{
@@ -363,6 +424,46 @@ void Renderer::draw_buttons()
 	button_program.finish();
 }
 
+void Renderer::draw_gui()
+{
+	#ifdef LINUX
+	if (ImGui::GetIO().MouseDrawCursor != gui.visible)
+	{
+		ImGui::GetIO().MouseDrawCursor = gui.visible;
+
+		if (!gui.visible)
+		{
+			// if gui is visible, regular drawing will apply the cursor state,
+			// but if not, draw one empty frame to update the state
+			ImGui_ImplOpenGL3_NewFrame();
+			ImGui_ImplSDL2_NewFrame();
+			ImGui::NewFrame();
+			ImGui::Render();
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+			ImGui::EndFrame();
+
+			return;
+		}
+	}
+	else
+	#endif
+	if (!gui.visible) return;
+
+	ImGui_ImplOpenGL3_NewFrame();
+	#ifdef LINUX
+	ImGui_ImplSDL2_NewFrame();
+	#else
+	ImGui_ImplAndroid_NewFrame();
+	#endif
+	ImGui::NewFrame();
+
+	gui.draw();
+
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+
 void Renderer::draw()
 {
 	#ifdef ANDROID
@@ -399,7 +500,7 @@ void Renderer::draw()
 	GL_CHECK;
 	draw_buttons();
 	GL_CHECK;
-	if (GUI::gui) GUI::gui->draw();
+	draw_gui();
 	GL_CHECK;
 
 	++current_buf; current_buf %= 2;

@@ -11,14 +11,13 @@ struct ANativeWindow;
 class GUI
 {
 public:
+	GUI(Document &doc) : doc(doc) {}
+
 	#ifdef LINUX
-	GUI(SDL_Window* window, SDL_GLContext context, Document &doc);
 	bool handle_event(const SDL_Event &event);
 	#else
-	GUI(ANativeWindow *window, Document &doc);
 	bool handle_touch(int ds, int n, int *id, float *x, float *y);
 	#endif
-	~GUI();
 
 	enum Page
 	{
@@ -31,24 +30,16 @@ public:
 		visible = true;
 		page = p; init_page();
 	}
-	static void Show(Page p) { if (gui) gui->show(p); }
 
 	void toggle();
 	void close();
-	static void Toggle() { if (gui) gui->toggle(); }
 
 	void draw();
-
-	static GUI *gui; // the one and only instance
+	bool visible = false; // static to keep this alive through Android's reinit
 
 private:
-	static bool visible; // static to keep this alive through Android's reinit
-	static Page page;
+	Page page = PREFERENCES;
 	Document &doc;
-
-	#ifdef ANDROID
-	ANativeWindow *window = NULL;
-	#endif
 
 	#ifdef DEBUG
 	bool show_demo_window = false;
@@ -57,7 +48,7 @@ private:
 	void p_preferences();
 
 	void p_settings();
-	static double tmp_N;
+	double tmp_N = 0.0;
 
 	void init_page();
 };

@@ -7,13 +7,10 @@
 #include <jni.h>
 #include <android/native_window_jni.h>
 
-//-------------------------------------------------------------------------------------------------------
-// Exports
-//-------------------------------------------------------------------------------------------------------
-
 static Renderer *renderer = NULL;
 static Window   *window = NULL;
 static Document  doc;
+static GUI       gui(doc);
 
 static void callback(JNIEnv *env, jobject obj, ButtonAction i)
 {
@@ -33,6 +30,10 @@ static void callback(JNIEnv *env, jobject obj, ButtonAction i)
 	}
 }
 
+//-------------------------------------------------------------------------------------------------------
+// Exports
+//-------------------------------------------------------------------------------------------------------
+
 extern "C" {
 #define F(ret, name)       JNIEXPORT ret JNICALL Java_com_hilgenberg_jigsaw_PuzzleView_ ## name (JNIEnv *env, jclass obj)
 #define FF(ret, name, ...) JNIEXPORT ret JNICALL Java_com_hilgenberg_jigsaw_PuzzleView_ ## name (JNIEnv *env, jclass obj, __VA_ARGS__)
@@ -42,7 +43,6 @@ FF(void, reinit, jobject surface, jstring path)
 	Preferences::directory(std::string(s, env->GetStringUTFLength(path)));
 	env->ReleaseStringUTFChars(path, s);
 
-	delete GUI::gui; assert(GUI::gui == NULL);
 	delete renderer; renderer = NULL;
 	delete window;   window   = NULL;
 	if (!Preferences::load_state(doc))
@@ -50,13 +50,11 @@ FF(void, reinit, jobject surface, jstring path)
 		bool ok = doc.load("///sample-data", 150);
 		assert(ok);
 	}
-	try { window = new Window(doc); } catch (...) { return; }
-	try { renderer = new Renderer(doc, *window); } catch (...) { delete window; window = NULL; return; }
-
 	ANativeWindow *jwin = ANativeWindow_fromSurface(env, surface);
-	assert(jwin != NULL);
-	if (jwin) new GUI(jwin, doc); // d'tor will call ANativeWindow_release
-	assert(GUI::gui != NULL);
+	assert(jwin != NULL); if (!jwin) return;
+	try { window = new Window(doc, gui); } catch (...) { return; }
+	try { renderer = new Renderer(doc, *window, gui, jwin); } catch (...) { delete window; window = NULL; return; }
+
 }
 
 F(void, pause)
@@ -65,7 +63,7 @@ F(void, pause)
 	Preferences::save_state(doc);
 
 	audio_pause();
-	delete GUI::gui;
+	delete renderer; renderer = NULL;
 }
 
 FF(jboolean, setImage, jstring path)
@@ -92,7 +90,7 @@ F(jboolean, draw)
 
 FF(void, touchUni, jint ds, jint id, jfloat x, jfloat y)
 {
-	if (!GUI::gui || !GUI::gui->handle_touch(ds, 1, &id, &x, &y)) 
+	if (!gui.handle_touch(ds, 1, &id, &x, &y))
 	if (window) window->handle_touch(ds, 1, &id, &x, &y, [env,obj](ButtonAction i){ callback(env, obj, i); });
 }
 
@@ -106,7 +104,7 @@ FF(void, touchMulti, jint ds, jintArray id_, jfloatArray x_, jfloatArray y_)
 	jfloat *x = env->GetFloatArrayElements(x_, NULL);
 	jfloat *y = env->GetFloatArrayElements(y_, NULL);
 	jint  *id = env->GetIntArrayElements (id_, NULL);
-	if (!GUI::gui || !GUI::gui->handle_touch(ds, n, id, x, y)) 
+	if (!gui.handle_touch(ds, n, id, x, y))
 	try { window->handle_touch(ds, n, id, x, y, [env,obj](ButtonAction i){ callback(env, obj, i); }); } catch (...) {}
 	env->ReleaseFloatArrayElements(x_, x, JNI_ABORT);
 	env->ReleaseFloatArrayElements(y_, y, JNI_ABORT);
