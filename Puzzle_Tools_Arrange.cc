@@ -38,7 +38,7 @@ static void move(Puzzle &puzzle, Puzzle::Piece i, double x, double y, bool anim,
 	if (y < y0) y0 = y; if (y+puzzle.sy > y1) y1 = y+puzzle.sy;
 }
 
-void arrange(Puzzle &puzzle, bool edge, bool animate)
+void arrange(Puzzle &puzzle, bool edge, bool animate, bool hide_tool_active)
 {
 	const int W = puzzle.W, H = puzzle.H;
 	if (W < 2 || H < 2 || Preferences::edge() == None) edge = false;
@@ -64,6 +64,7 @@ void arrange(Puzzle &puzzle, bool edge, bool animate)
 		{
 			if (!puzzle.should_arrange(i)) continue;
 			if (edge && puzzle.is_edge_piece(i)) continue;
+			if (hide_tool_active && is_hidden(puzzle, i)) continue;
 
 			float x = c.x + r*cos(a);
 			float y = c.y + r*sin(a);
@@ -88,6 +89,7 @@ void arrange(Puzzle &puzzle, bool edge, bool animate)
 		{
 			if (!puzzle.should_arrange(i)) continue;
 			if (edge && puzzle.is_edge_piece(i)) continue;
+			if (hide_tool_active && is_hidden(puzzle, i)) continue;
 			double x = X00 + ix * (w+spcx);
 			double y = Y00 + iy * (h+spcy);
 			move(puzzle, i, x, y, animate, X0, X1, Y0, Y1);

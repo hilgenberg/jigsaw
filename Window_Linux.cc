@@ -206,12 +206,12 @@ bool Window::handle_key(SDL_Keysym keysym, bool release)
 			return true;
 
 		case SDLK_SPACE:
-			if (ctrl) arrange(doc.puzzle, false);
+			if (ctrl) arrange(doc.puzzle, false, true, doc.tool == Tool::HIDE);
 			else reset_view(doc.puzzle, doc.camera);
 			start_animations();
 			return true;
 		case SDLK_e:
-			arrange(doc.puzzle, true);
+			arrange(doc.puzzle, true, true, doc.tool == Tool::HIDE);
 			start_animations();
 			return true;
 		#ifdef DEBUG

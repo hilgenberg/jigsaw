@@ -107,10 +107,11 @@ void Window::animate()
 
 void Window::button_action(ButtonAction a)
 {
+	#define LIC_CHK if (!license()) gui.show(GUI::DIALOG); else
 	switch (a)
 	{
-		case ARRANGE:      arrange(doc.puzzle, false); start_animations(); break;
-		case EDGE_ARRANGE: arrange(doc.puzzle, true);  start_animations(); break;
+		case ARRANGE:      arrange(doc.puzzle, false, true, doc.tool == Tool::HIDE); start_animations(); break;
+		case EDGE_ARRANGE: LIC_CHK{ arrange(doc.puzzle, true, true, doc.tool == Tool::HIDE); start_animations(); } break;
 		case RESET_VIEW:   reset_view(doc.puzzle, doc.camera); break;
 		case CHANGE_IMAGE:
 			#ifdef LINUX

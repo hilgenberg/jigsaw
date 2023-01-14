@@ -7,6 +7,16 @@
 // Hide Tool
 //-----------------------------------------------------------------------------
 
+bool is_hidden(const Puzzle &puzzle, Puzzle::Piece piece)
+{
+	double R = 1.25*hypot(puzzle.W, puzzle.H);
+	assert(piece >= 0 && piece < puzzle.N);
+	P2d p = puzzle.pos[piece];
+	p.x += 0.5; p.x *= puzzle.sx;
+	p.y += 0.5; p.y *= puzzle.sy;
+	return p.absq() >= R*R;
+}
+
 static void hide(Puzzle &puzzle, Puzzle::Piece piece)
 {
 	double R = 1.25*hypot(puzzle.W, puzzle.H);
