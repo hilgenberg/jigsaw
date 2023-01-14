@@ -59,8 +59,7 @@ Renderer::Renderer(Document &doc, Window &window, GUI &gui, ANativeWindow *jni_w
 		GL_CHECK;
 	}
 
-	/* button image */
-	{
+	/* button images */ {
 		GL_Image im;
 		std::vector<GL_Image> tmp(N_BUTTON_IMAGES);
 		#define ICON(id, x) tmp[id].load(x##_data, x##_data_len)
@@ -139,9 +138,7 @@ Renderer::Renderer(Document &doc, Window &window, GUI &gui, ANativeWindow *jni_w
 	//----------------------------------------------------------------------------
 
 	glGenVertexArrays(1, &bg_VAO);
-
-	alloc_puzzle(false);
-
+	alloc_puzzle_VOs(false);
 	glGenVertexArrays(2, button_VAO);
 	glGenBuffers(2, button_VBO);
 	#define BUTTON_VERTEX_DATA_SIZE MAX_BUTTONS*(2*sizeof(float) + 2) /* needed below for the GLES version */
@@ -199,7 +196,7 @@ Renderer::Renderer(Document &doc, Window &window, GUI &gui, ANativeWindow *jni_w
 	#endif
 }
 
-void Renderer::alloc_puzzle(bool free_old_buffers)
+void Renderer::alloc_puzzle_VOs(bool free_old_buffers)
 {
 	GL_CHECK;
 	if (free_old_buffers)
@@ -466,24 +463,20 @@ void Renderer::draw_gui()
 
 void Renderer::draw()
 {
+	GL_CHECK;
 	#ifdef ANDROID
 	if (eglGetCurrentContext() != context) return;
 	#endif
 
-	GL_CHECK;
 	doc.draw();
 	window.animate();
-	GL_CHECK;
 
 	const int N = doc.puzzle.N;
-	if (current_N < N || (current_N > N+100 && current_N > N*1.5))
-		alloc_puzzle(true);
+	if (current_N < N || current_N > std::max(N+100, N*3/2)) alloc_puzzle_VOs(true);
 
 	const Camera &camera = doc.camera;
 	int w = camera.screen_w(), h = camera.screen_h();
-	if (camera.empty()) return;
 
-	GL_CHECK;
 	glViewport(0, 0, w, h);
 	Preferences::bg_color().set_clear();
 	#ifdef LINUX
@@ -493,6 +486,7 @@ void Renderer::draw()
 	#endif
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	GL_CHECK;
+	if (camera.empty()) return;
 
 	draw_background();
 	GL_CHECK;

@@ -303,9 +303,13 @@ bool Puzzle::drop(Piece i, double delta_max)
 
 		if (!snap)
 		{
-			// find the biggest group (which will get to keep its position)
+			// find the group that will get to keep its position
 			int n0 = (g[i] < 0 ? 1 : groups[g[i]].size());
-			for (Piece a : adding) if (g[a] >= 0 && groups[g[a]].size() > n0) { i = a; n0 = groups[g[a]].size(); }
+			for (Piece a : adding)
+			{
+				if (is_snapped(a)) { i = a; break; }
+				if (g[a] >= 0 && groups[g[a]].size() > n0) { i = a; n0 = groups[g[a]].size(); }
+			}
 		}
 
 		// merge the full groups

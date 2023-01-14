@@ -124,6 +124,8 @@ int main(int argc, char *argv[])
 		{
 			if (!Preferences::load_state(doc))
 				doc.load("///sample-data", n);
+			else if (doc.puzzle.solved())
+				doc.load(doc.puzzle.N);
 		}
 
 		if (n > 0) Preferences::pieces(n);

@@ -40,11 +40,6 @@ void Document::load(Deserializer &s)
 	s.member_(camera);
 	s.marker_("EOF.");
 	tool = Tool::NONE;
-	if (puzzle.solved())
-	{
-		puzzle.reset(puzzle.im.w(), puzzle.im.h(), puzzle.N);
-		puzzle.shuffle(false);
-	}
 }
 void Document::save(Serializer &s) const
 {

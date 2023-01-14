@@ -23,7 +23,7 @@ void GUI::p_preferences()
 	#ifdef DEBUG
 	constexpr int NUM_OPTIONS = 7;
 	#else
-	constexpr int NUM_OPTIONS = 7;
+	constexpr int NUM_OPTIONS = 6;
 	#endif
 	static const char *s_max_pieces[] = {"Max Pieces: 500", "Max Pieces: 1000", "Max Pieces: 5000", "Max Pieces: 10.000", "Max Pieces: 50.000", "Max Pieces: 100.000", "Max Pieces: 1.000.000"};
 	static const int   n_max_pieces[] = { 500 ,  1000 ,  5000 ,   10000,    50000,    100000,     1000000 };

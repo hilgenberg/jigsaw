@@ -119,7 +119,7 @@ void Window::handle_touch(int ds, int n, int *id, float *x, float *y, std::funct
 
 		if (pointer_state.size() == 1)
 		{
-			if (clicked_button >= 0 || doc.tool == Tool::HIDE) return;
+			if (clicked_button >= 0) return;
 
 			assert(n == 1);
 			assert(pointer_state.count(*id));

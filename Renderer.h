@@ -13,11 +13,13 @@ class GUI;
 class Renderer
 {
 public:
+	Renderer(Document &doc, Window &window, GUI &gui, 
 	#ifdef LINUX
-	Renderer(Document &doc, Window &window, GUI &gui, SDL_Window *sdl_window, SDL_GLContext context);
+		SDL_Window *sdl_window, SDL_GLContext context
 	#else
-	Renderer(Document &doc, Window &window, GUI &gui, ANativeWindow *jni_window);
+		ANativeWindow *jni_window
 	#endif
+	);
 
 	~Renderer();
 	void draw();
@@ -29,9 +31,10 @@ private:
 	
 	#ifdef ANDROID
 	const EGLContext context; // which GL context do all our objects live in?
-	ANativeWindow *jni_window = NULL;
+	ANativeWindow *jni_window = NULL; // only to call ANativeWindow_release on it
 	#endif
-	void alloc_puzzle(bool free_old_buffers);
+	
+	void alloc_puzzle_VOs(bool free_old_buffers); // realloc when puzzle.N changes
 
 	void draw_background();
 	void draw_puzzle();
@@ -39,7 +42,7 @@ private:
 	void draw_gui();
 
 	int current_buf = 0; // we use double buffering for data to avoid stalls in glMap
-	int current_N = 0;
+	int current_N = 0; // from last alloc_puzzle_VOs call
 
 	GL_Program program;
 	GLuint VBO[2] = {0,0}, VAO[2] = {0,0};

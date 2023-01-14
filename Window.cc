@@ -153,7 +153,7 @@ bool Window::button_hit(const Buttons::Button &b, float mx, float my)
 
 void Window::drop()
 {
-	if (dragging < 0) return;
+	if (dragging < 0) { dragging = -1; return; }
 	if (drag_tool_drop(doc.puzzle, doc.camera, dragging, magnetized))
 	{
 		play_click();
