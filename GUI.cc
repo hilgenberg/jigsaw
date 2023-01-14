@@ -19,6 +19,9 @@ void GUI::init_page()
 		case PREFERENCES: break;
 		case SETTINGS:
 			tmp_N = doc.puzzle.N; break;
+		case DIALOG:
+			dlg = 0;
+			break;
 		default: assert(false);
 	}
 }
@@ -32,26 +35,28 @@ void GUI::draw()
 	ImGui::GetStyle().FrameBorderSize = dark ? 0.0f : 1.0f;
 
 	ImGuiViewport &screen = *ImGui::GetMainViewport();
-	ImGui::SetNextWindowBgAlpha(0.75f);
+	ImGui::SetNextWindowBgAlpha(page==DIALOG ? 0.8f : 0.75f);
 	ImVec2 center = screen.GetCenter();
-	ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowPos(center, page==DIALOG ? ImGuiCond_Always : ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 	//ImGui::SetNextWindowSize(screen.WorkSize, ImGuiCond_Always);
 
-	ImGui::Begin(format("##GUI Page %d", page).c_str(), NULL, 
+	if (ImGui::Begin(format("##GUI Page %d", page).c_str(), NULL, 
 		ImGuiWindowFlags_AlwaysAutoResize | 
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoSavedSettings | 
-		ImGuiWindowFlags_NoCollapse);
-
-	switch (page)
+		ImGuiWindowFlags_NoCollapse))
 	{
-		case PREFERENCES: p_preferences(); break;
-		case SETTINGS: p_settings(); break;
-		default: assert(false);
-	}
+		switch (page)
+		{
+			case PREFERENCES: p_preferences(); break;
+			case SETTINGS: p_settings(); break;
+			case DIALOG: p_dialog(); break;
+			default: assert(false);
+		}
 
-	ImGui::End();
+		ImGui::End();
+	}
 
 	#ifdef DEBUG
 	if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
@@ -141,6 +146,9 @@ bool GUI::handle_event(const SDL_Event &event)
 			case SDLK_d:
 				show_demo_window = !show_demo_window;
 				doc.redraw(3);
+				return true;
+			case SDLK_f:
+				show(DIALOG);
 				return true;
 			#endif
 		}

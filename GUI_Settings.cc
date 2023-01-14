@@ -1,4 +1,5 @@
 #include "GUI.h"
+#include "License.h"
 
 static constexpr int slider_flags = ImGuiSliderFlags_AlwaysClamp|ImGuiSliderFlags_NoRoundToFormat|ImGuiSliderFlags_NoInput;
 
@@ -21,6 +22,11 @@ void GUI::p_settings()
 
 	if (apply_)
 	{
+		if (tmp_N > 301.0 && !license())
+		{
+			show(DIALOG);
+			return;
+		}
 		doc.load((int)tmp_N);
 		doc.redraw();
 		applied = true;

@@ -23,6 +23,7 @@ public:
 	{
 		PREFERENCES,
 		SETTINGS, // puzzle settings (N, cropping, ...)
+		DIALOG // talking to the sales creature
 	};
 	void show(Page p)
 	{
@@ -50,5 +51,9 @@ private:
 	void p_settings();
 	double tmp_N = 0.0;
 
+	void p_dialog();
+	int dlg = 0;
+
 	void init_page();
+
 };
