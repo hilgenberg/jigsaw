@@ -34,6 +34,7 @@ inline std::exception error(const char *what, const std::string &who, bool stupi
 bool is_int(const std::string &s, int &value);
 bool is_int(const char *s, int &value);
 
-bool has_prefix(const std::string &s, const char *prefix, bool ignore_case);
-bool has_prefix(const char *s, const char *prefix, bool ignore_case);
+bool has_prefix(const std::string &s, const std::string &prefix, bool ignore_case = false);
+bool has_prefix(const std::string &s, const char *prefix, bool ignore_case = false);
+bool has_prefix(const char *s, const char *prefix, bool ignore_case = false);
 	

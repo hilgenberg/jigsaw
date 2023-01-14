@@ -66,12 +66,35 @@ F(void, pause)
 	delete renderer; renderer = NULL;
 }
 
-FF(jboolean, setImage, jstring path)
+FF(jboolean, setImage, jstring path_)
 {
-	const char *s = env->GetStringUTFChars(path, NULL);
-	bool ok = doc.load(std::string(s, env->GetStringUTFLength(path)), 200);
-	env->ReleaseStringUTFChars(path, s);
-	if (ok) Preferences::save_state(doc);
+	const char *s = env->GetStringUTFChars(path_, NULL);
+	std::string path(s, env->GetStringUTFLength(path_));
+	env->ReleaseStringUTFChars(path_, s);
+	
+	std::string prior = doc.puzzle.im_path;
+	int N = doc.puzzle.N; if (N < 9) N = 200;
+
+	bool ok = doc.load(path, N);
+	if (ok)
+		Preferences::save_state(doc);
+	else
+		prior = path; // delete the broken new file instead
+
+	std::string cache = Preferences::directory();
+
+	if (!cache.empty() && has_prefix(prior, cache)) try
+	{
+		if (std::filesystem::remove(prior))
+			LOG_DEBUG("Removed %s from cache.", prior.c_str());
+		else
+			LOG_ERROR("Could not delete %s from cache", prior.c_str());
+	}
+	catch (const std::filesystem::filesystem_error &err)
+	{
+		LOG_ERROR("Could not delete %s from cache: %s", prior.c_str(), err.what());
+	}
+
 	return ok;
 }
 
