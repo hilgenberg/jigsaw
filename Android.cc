@@ -45,7 +45,7 @@ FF(void, reinit, jobject surface, jstring path)
 
 	delete renderer; renderer = NULL;
 	delete window;   window   = NULL;
-	if (!Preferences::load_state(doc))
+	if (doc.puzzle.N < 9 && !Preferences::load_state(doc))
 	{
 		bool ok = doc.load("///sample-data", 150);
 		assert(ok);
@@ -54,7 +54,6 @@ FF(void, reinit, jobject surface, jstring path)
 	assert(jwin != NULL); if (!jwin) return;
 	try { window = new Window(doc, gui); } catch (...) { return; }
 	try { renderer = new Renderer(doc, *window, gui, jwin); } catch (...) { delete window; window = NULL; return; }
-
 }
 
 F(void, pause)
@@ -136,6 +135,5 @@ FF(void, touchMulti, jint ds, jintArray id_, jfloatArray x_, jfloatArray y_)
 	env->ReleaseIntArrayElements(id_, id, JNI_ABORT);
 }
 
-};
-
-#endif
+}; // extern "C"
+#endif // ANDROID
