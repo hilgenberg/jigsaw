@@ -6,7 +6,6 @@
 GL_Program::~GL_Program()
 {
 	if (program) glDeleteProgram(program);
-	GL_CHECK;
 }
 
 void GL_Program::add_uniform(const char *type, const char *name)
