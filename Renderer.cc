@@ -209,7 +209,8 @@ void Renderer::alloc_puzzle_VOs(bool free_old_buffers)
 	const int N = doc.puzzle.N;
 	glGenVertexArrays(2, VAO);
 	glGenBuffers(2, VBO);
-	#define VERTEX_DATA_SIZE N*(4*sizeof(float) + 1) /* needed below for the GLES version */
+	current_N = N;
+	#define VERTEX_DATA_SIZE current_N*(4*sizeof(float) + 1) /* needed below for the GLES version */
 	for (int i = 0; i < 2; ++i)
 	{
 		assert(sizeof(Puzzle::Border) == 1);
@@ -227,7 +228,6 @@ void Renderer::alloc_puzzle_VOs(bool free_old_buffers)
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		GL_CHECK;
 	}
-	current_N = N;
 }
 
 Renderer::~Renderer()
@@ -327,7 +327,7 @@ void Renderer::draw_puzzle()
 	float *data = (float*)glMapBufferRange(GL_ARRAY_BUFFER, 0, VERTEX_DATA_SIZE, GL_MAP_WRITE_BIT);
 	#endif
 
-	unsigned char *d = (unsigned char*)(data+4*N);
+	unsigned char *d = (unsigned char*)(data+4*current_N);
 	for (int i : reverse(puzzle.z))
 	{
 		CameraCoords p = puzzle.to_camera(puzzle.pos[i]);
