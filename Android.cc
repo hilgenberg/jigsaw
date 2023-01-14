@@ -81,11 +81,13 @@ FF(void, resize, jint w, jint h)
 	window->reshape(w, h);
 }
 
-F(jboolean, draw)
+F(jint, draw)
 {
 	if (!renderer) return false;
 	renderer->draw();
-	return doc.needs_redraw();
+	int ret = (int)(bool)doc.needs_redraw() + 2 * pending_vibration;
+	pending_vibration = false;
+	return ret;
 }
 
 FF(void, touchUni, jint ds, jint id, jfloat x, jfloat y)

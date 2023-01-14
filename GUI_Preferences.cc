@@ -45,6 +45,16 @@ void GUI::p_preferences()
 	ImGui::ColorEdit4("Background Color", tmp.v, colorEditFlags);
 	if (tmp != orig) { Preferences::bg_color(tmp); doc.redraw(); }
 
+	b0 = Preferences::click(); b = b0;
+	ImGui::Checkbox("Click When Connecting", &b);
+	if (b != b0) Preferences::click(b);
+
+	#ifdef ANDROID
+	b0 = Preferences::vibrate(); b = b0;
+	ImGui::Checkbox("Vibrate When Connecting", &b);
+	if (b != b0) Preferences::vibrate(b);
+	#endif
+
 	b0 = Preferences::spiral(); b = b0;
 	ImGui::Checkbox("Spiral Arrange", &b);
 	if (b != b0) Preferences::spiral(b);

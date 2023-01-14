@@ -1,10 +1,13 @@
 #ifdef ANDROID
+#include "Utility/Preferences.h"
 #include <oboe/Oboe.h>
 #include <algorithm>
 #include <vector>
 #include "data.h"
 #include <cstring>
 #include <limits>
+
+bool pending_vibration = false;
 
 class WavFile
 {
@@ -97,6 +100,8 @@ public:
 
 	void play_click()
 	{
+		pending_vibration = Preferences::vibrate();
+		if (!Preferences::click()) return;
 		if (!stream && !init()) return;
 		pos = 0;
 		stream->requestStart();

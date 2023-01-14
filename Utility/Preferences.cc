@@ -27,6 +27,10 @@ static ScreenEdge  button_edge_    = LEFT;
 static ScreenAlign button_align_   = CENTERED;
 static GL_Color    bg_color_(0.25);
 static float       finger_radius_  = DEFAULT_FINGER;
+static bool        click_          = true;
+#ifdef ANDROID
+static bool        vibrate_        = false;
+#endif
 
 void reset_all()
 {
@@ -41,9 +45,13 @@ void reset_all()
 	button_scale_   = 0.0f;
 	spiral_         = false;
 	button_edge_    = LEFT;
-	button_align_   = TOP_OR_LEFT;
+	button_align_   = CENTERED;
 	bg_color_       = GL_Color(0.25);
 	finger_radius_  = DEFAULT_FINGER;
+	click_          = true;
+	#ifdef ANDROID
+	vibrate_        = false;
+	#endif
 }
 
 static path cfg;
@@ -154,6 +162,10 @@ namespace Preferences
 	PREFV(ScreenAlign, button_align);
 	PREFV(bool,        spiral);
 	PREFV(float,       finger_radius);
+	PREFV(bool,        click);
+	#ifdef ANDROID
+	PREFV(bool,        vibrate);
+	#endif
 };
 
 
@@ -191,6 +203,10 @@ static bool load()
 		s.enum_  (button_edge_, LEFT, BOTTOM);
 		s.enum_  (button_align_, TOP_OR_LEFT, BOTTOM_OR_RIGHT);
 		s.float_ (finger_radius_);
+		s.bool_  (click_);
+		#ifdef ANDROID
+		s.bool_  (vibrate_);
+		#endif
 	}
 	catch (...)
 	{
@@ -231,6 +247,10 @@ static bool save()
 		s.enum_  ((int)button_edge_, LEFT, BOTTOM);
 		s.enum_  ((int)button_align_, TOP_OR_LEFT, BOTTOM_OR_RIGHT);
 		s.float_ (finger_radius_);
+		s.bool_  (click_);
+		#ifdef ANDROID
+		s.bool_  (vibrate_);
+		#endif
 	}
 	catch (...)
 	{

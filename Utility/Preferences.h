@@ -64,7 +64,13 @@ namespace Preferences
 	PREFV(ScreenAlign, button_align);
 	PREFV(bool,        spiral);
 	PREFV(float,       finger_radius); // in pixels
-	
+	PREFV(bool,        click);
+	#ifdef ANDROID
+	PREFV(bool,        vibrate);
+	#endif
+
+
+
 	#undef PREFV
 	#undef PREFR
 

@@ -1,4 +1,5 @@
 #ifdef LINUX
+#include "Utility/Preferences.h"
 #include <AL/al.h>
 #include <AL/alc.h>
 #include <AL/alut.h>
@@ -32,6 +33,7 @@ bool audio_init(int &argc, char **argv)
 
 void play_click()
 {
+	if (!Preferences::click()) return;
 	alSourcePlay(source); TEST_ERROR("source playing");
 }
 
