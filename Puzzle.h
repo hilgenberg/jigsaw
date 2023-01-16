@@ -75,7 +75,7 @@ struct Puzzle : public Serializable
 	inline PuzzleCoords delta(Piece i) const // distance from final place
 	{
 		assert(i >= 0 && i < N);
-		return pos[i] - P2d(i%W-0.5f*W, i/W-0.5f*H);
+		return pos[i] - P2d(i%W - 0.5*W, i/W - 0.5*H);
 	}
 
 	inline bool align(Piece i, double delta_max) const // should it snap into place?

@@ -182,8 +182,8 @@ void Puzzle::pick_up(Piece i)
 		auto &G = groups[g[i]];
 		auto it = std::remove_if(z.begin(), z.end(), [&G](Piece p){ return G.count(p) > 0; });
 		assert(it == z.begin()+N-G.size());
-		int i = N-G.size();
-		for (Piece j : G) z[i++] = j;
+		int k = N-G.size();
+		for (Piece j : G) z[k++] = j;
 	}
 
 	sanity_checks();
@@ -251,7 +251,7 @@ bool Puzzle::drop(Piece i, double delta_max)
 
 	bool snap = ((Preferences::absolute_mode() || is_corner_group(i)) && delta(i).absq() > 1e-12 && align(i, delta_max));
 
-	if (snap) move(i, P2d(i%W - 0.5*W,i/W - 0.5*H), false);
+	if (snap) move(i, P2d(i%W - 0.5*W, i/W - 0.5*H), false);
 
 	// check for new connections
 	std::set<Piece> adding;
@@ -274,7 +274,7 @@ bool Puzzle::drop(Piece i, double delta_max)
 
 	if (adding.empty())
 	{
-		zsort();
+		if (snap || g[i] >= 0) zsort();
 		return snap;
 	}
 
@@ -307,7 +307,7 @@ bool Puzzle::drop(Piece i, double delta_max)
 			int n0 = (g[i] < 0 ? 1 : groups[g[i]].size());
 			for (Piece a : adding)
 			{
-				if (is_snapped(a)) { i = a; break; }
+				if (is_snapped(a)) { i = a; snap = true; break; }
 				if (g[a] >= 0 && groups[g[a]].size() > n0) { i = a; n0 = groups[g[a]].size(); }
 			}
 		}
@@ -342,6 +342,8 @@ bool Puzzle::drop(Piece i, double delta_max)
 	} while (!adding.empty());
 
 	while (groups.back().empty()) groups.pop_back();
+
+	if (snap) move(i, P2d(i%W - 0.5*W, i/W - 0.5*H), false); // probably not needed...
 
 	zsort();
 
