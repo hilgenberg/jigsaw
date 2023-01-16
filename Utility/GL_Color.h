@@ -1,11 +1,7 @@
 #pragma once
 #include "../Persistence/Serializer.h"
-#include <ostream>
 #include <string>
 #include <map>
-#ifdef _WINDOWS
-#include <GdiPlus.h>
-#endif
 
 struct GL_Color : public Serializable
 {
@@ -53,8 +49,4 @@ struct GL_Color : public Serializable
 	
 	bool operator== (const GL_Color &c) const{ return fabsf(r-c.r) < 1e-8f && fabsf(g-c.g) < 1e-8f && fabsf(b-c.b) < 1e-8f && fabsf(a-c.a) < 1e-8f; }
 	bool operator!= (const GL_Color &c) const{ return !operator==(c); }
-	
-	GL_Color operator* (float alpha) const{ assert(alpha >= 0.0f && alpha <= 1.0f); return GL_Color(r, g, b, a * alpha); }
 };
-
-std::ostream &operator<<(std::ostream &os, const GL_Color &c);

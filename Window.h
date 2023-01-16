@@ -20,12 +20,11 @@ public:
 	Window(Document &doc, GUI &gui);
 	// ds is  1: touch down, -1: touch lifted, 0: movement
 	// special case ds == -1, n == 0: lift all / cancel gesture
-	void handle_touch(int ds, int n, int *id, float *x, float *y, std::function<void(ButtonAction)> button_callback);
+	void handle_touch(int ds, int n, int *id, float *x, float *y);
 	#endif
 
 	void animate();
 	void reshape(int w, int h);
-
 	void button_action(ButtonAction a);
 
 private:

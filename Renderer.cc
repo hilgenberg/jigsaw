@@ -463,11 +463,11 @@ void Renderer::draw_gui()
 
 void Renderer::draw()
 {
-	GL_CHECK;
 	#ifdef ANDROID
 	if (eglGetCurrentContext() != context) return;
 	#endif
 
+	GL_CHECK;
 	doc.draw();
 	window.animate();
 

@@ -33,18 +33,15 @@ class MainActivity : Activity()
 
 	override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?)
 	{
+		// only called from the image chooser (requestCode == 1)
 		super.onActivityResult(requestCode, resultCode, data)
-
-		if (requestCode != 1)  { Log.d("JIGSAW", "garbage request ID!"); return; }
-		if (resultCode != RESULT_OK)  { Log.d("JIGSAW", "garbage result code!"); return; }
-
-		if (data == null) { Log.d("JIGSAW", "no data from image picker!"); return; }
-		//data.dataString?.let { Log.d("JIGSAW", it) }
+		if (requestCode != 1)  { Log.e("JIGSAW", "garbage request ID!"); return; }
+		if (resultCode != RESULT_OK)  { Log.d("JIGSAW", "result code: $resultCode"); return; }
+		if (data == null) { Log.e("JIGSAW", "no data from image picker!"); return; }
 		data.data?.let { uri ->
 			val file = File.createTempFile("img", ".tmp", filesDir)
-			file.outputStream().use { contentResolver.openInputStream(uri)?.copyTo(it) }
-			Log.d("JIGSAW", file.absolutePath)
-			if (!view.setImage(file.absolutePath)) Log.d("JIGSAW", "Failed to load!")
+			file.outputStream().use { of -> contentResolver.openInputStream(uri)?.use { it.copyTo(of) }}
+			if (!view.setImage(file.absolutePath)) Log.e("JIGSAW", "Failed to load image!")
 		}
 	}
 }

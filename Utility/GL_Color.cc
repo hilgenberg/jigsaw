@@ -21,9 +21,3 @@ void GL_Color::set_clear() const
 {
 	glClearColor(r, g, b, a);
 }
-
-std::ostream &operator<<(std::ostream &os, const GL_Color &c)
-{
-	os << '(' << c.r << ", " << c.g << ", " << c.b << ", " << c.a << ')';
-	return os;
-}

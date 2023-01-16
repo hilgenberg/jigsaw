@@ -1,9 +1,8 @@
 #pragma once
-#include "../Persistence/Serializer.h"
 #include "GL_Color.h"
 #include <vector>
 
-struct GL_Image final : public Serializable
+struct GL_Image final
 {
 	GL_Image() : _w(0), _h(0) { }
 	GL_Image(const GL_Image &i)
@@ -14,8 +13,6 @@ struct GL_Image final : public Serializable
 	
 	bool load(const std::string &path);
 	bool load(const unsigned char *data, size_t len);
-	virtual void load(Deserializer &s);
-	virtual void save(Serializer   &s) const;
 	
 	GL_Image &operator=(const GL_Image &x)
 	{

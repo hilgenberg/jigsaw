@@ -61,52 +61,6 @@ bool GL_Image::load(const unsigned char *data, size_t len)
 	return true;
 }
 
-void GL_Image::save(Serializer &s) const
-{
-	check_data();
-	s.uint32_(_w);
-	s.uint32_(_h);
-
-	size_t n = (size_t)_w * _h;
-	std::vector<unsigned char> channel(4*n);
-	unsigned char *cd = channel.data();
-
-	const unsigned char *d = _data.data() + 3;
-	for (size_t j = 0; j < n; ++j, d += 4) *cd++ = *d;
-	for (int i = 2; i >= 0; --i)
-	{
-		d = _data.data() + i;
-		for (size_t j = 0; j < n; ++j, d += 4) *cd++ = *d - d[1];
-	}
-	s.data_(channel);
-}
-void GL_Image::load(Deserializer &s)
-{
-	s.uint32_(_w);
-	s.uint32_(_h);
-	
-	size_t n = (size_t)_w * _h;
-	_data.resize(n * 4);
-	std::vector<unsigned char> channel;
-	s.data_(channel);
-	if (channel.size() != 4*n)
-	{
-		_w = _h = 0;
-		_data.clear();
-		throw std::runtime_error("Reading texture data failed. This file seems to be corrupted.");
-	}
-	const unsigned char *cd = channel.data();
-	unsigned char *d = _data.data() + 3;
-	for (size_t j = 0; j < n; ++j, d += 4) *d = *cd++;
-	for (int i = 2; i >= 0; --i)
-	{
-		d = _data.data() + i;
-		for (size_t j = 0; j < n; ++j, d += 4) *d = *cd++ + d[1];
-	}
-	
-	check_data();
-}
-
 const std::vector<unsigned char> &GL_Image::data() const
 {
 	return _data;

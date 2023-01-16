@@ -62,16 +62,13 @@ public:
 	void double_(double x);
 	
 	void string_(const std::string &x);
-	void object_(const Serializable *x); ///< writes only one copy of every object
 	void member_(const Serializable &x) { x.save(*this); }
-	void data_(const std::vector<unsigned char> &data, bool compress=true);
 	void marker_(const char *s);
 	void raw_(std::vector<unsigned char> &data);
 	
 private:
 	const unsigned ver; ///< (major << 16) + minor
 	ByteWriter &f;
-	std::map<const Serializable *, uint64_t> od; ///< for keeping track of what _object already saved
 };
 
 /**
@@ -106,16 +103,13 @@ public:
 	void double_(double &x);
 
 	void string_(std::string &x);
-	void object_(Serializable *&x);
 	void member_(Serializable  &x) { x.load(*this); }
-	void data_(std::vector<unsigned char> &data);
 	void marker_(const char *s);
 	void raw_(std::vector<unsigned char> &data, size_t n);
 
 private:
 	ByteReader &f;
 	unsigned  ver;
-	std::vector<Serializable *> od;
 };
 
 /** @} */

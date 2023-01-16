@@ -13,7 +13,7 @@ static std::string image_;
 static int         pieces_         = 256;
 #define DEFAULT_FINGER 0.0f
 #else
-#define DEFAULT_FINGER 60.0f
+#define DEFAULT_FINGER 40.0f
 #endif
 
 
@@ -30,6 +30,7 @@ static float       finger_radius_  = DEFAULT_FINGER;
 static bool        click_          = true;
 #ifdef ANDROID
 static bool        vibrate_        = false;
+static bool        cached_license_ = false;
 #endif
 
 void reset_all()
@@ -51,6 +52,7 @@ void reset_all()
 	click_          = true;
 	#ifdef ANDROID
 	vibrate_        = false;
+	cached_license_ = false;
 	#endif
 }
 
@@ -165,6 +167,7 @@ namespace Preferences
 	PREFV(bool,        click);
 	#ifdef ANDROID
 	PREFV(bool,        vibrate);
+	PREFV(bool,        cached_license);
 	#endif
 };
 
@@ -206,6 +209,7 @@ static bool load()
 		s.bool_  (click_);
 		#ifdef ANDROID
 		s.bool_  (vibrate_);
+		int tmp; s.int32_ (tmp); cached_license_ = (tmp == 0x00040005);
 		#endif
 	}
 	catch (...)
@@ -250,6 +254,7 @@ static bool save()
 		s.bool_  (click_);
 		#ifdef ANDROID
 		s.bool_  (vibrate_);
+		s.int32_ (cached_license_ ? 0x00040005 : 0x00010000);
 		#endif
 	}
 	catch (...)

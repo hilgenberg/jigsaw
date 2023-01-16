@@ -42,4 +42,4 @@ add_library(jigsaw SHARED
 		${imgui}/backends/imgui_impl_android.cpp
 		${imgui}/backends/imgui_impl_opengl3.cpp
 		${imgui}/misc/cpp/imgui_stdlib.cpp)
-target_link_libraries(jigsaw GLESv3 EGL m oboe::oboe android log z)
+target_link_libraries(jigsaw GLESv3 EGL m oboe::oboe android log)

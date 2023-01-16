@@ -1,5 +1,4 @@
 package com.hilgenberg.jigsaw
-
 import android.app.Activity
 import android.app.Application
 import android.content.Intent
@@ -11,7 +10,6 @@ import android.view.Surface
 import androidx.core.app.ActivityCompat.startActivityForResult
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
-
 
 internal class PuzzleView(val context: Application, val activity: MainActivity) : GLSurfaceView(context)
 {
@@ -86,6 +84,11 @@ internal class PuzzleView(val context: Application, val activity: MainActivity) 
 		}
 	}
 
+	fun buyLicense()
+	{
+		// TODO
+	}
+
 	fun vibrate()
 	{
 		val v = context.getSystemService(Activity.VIBRATOR_SERVICE) as Vibrator
@@ -99,6 +102,8 @@ internal class PuzzleView(val context: Application, val activity: MainActivity) 
 	private external fun reinit(surface: Surface, data_path: String)
 	public  external fun setImage(path: String) : Boolean
 	private external fun pause()
+	private external fun setLicensed()
+	private external fun findCachedLicense() : Boolean
 	private external fun draw() : Int
 	private external fun resize(width: Int, height: Int)
 	private external fun touchUni(ds: Int, id: Int, x: Float, y: Float)

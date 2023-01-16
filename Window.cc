@@ -15,6 +15,8 @@
 #ifdef LINUX
 extern volatile bool quit;
 static inline double absmax(double a, double b){ return fabs(a) > fabs(b) ? a : b; }
+#else
+extern void call_change_image();
 #endif
 
 void Window::start_animations() { if (!anim) { last_frame = now(); anim = true; doc.redraw(); } }
@@ -116,6 +118,8 @@ void Window::button_action(ButtonAction a)
 		case CHANGE_IMAGE:
 			#ifdef LINUX
 			gui.show(GUI::DIALOG);
+			#else
+			call_change_image();
 			#endif
 			break;
 		case SETTINGS:     gui.show(GUI::SETTINGS); break;

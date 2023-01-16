@@ -40,22 +40,16 @@ public:
  * Wrapper for FILE* that is opened for reading.
  */
 
-#ifdef _WINDOWS
-typedef CFile FileReaderFile;
-#else
-typedef FILE FileReaderFile;
-#endif
-
 class FileReader : public ByteReader
 {
 public:
-	FileReader(FileReaderFile *f);
+	FileReader(FILE *f);
 	virtual void read(void *buffer, size_t len);
 	virtual size_t  pos(){ return i; }
 	virtual size_t size(){ return n; }
 	
 protected:
-	FileReaderFile *f;
+	FILE *f;
 	size_t n, i; // length and current position
 };
 
@@ -66,11 +60,11 @@ protected:
 class FileWriter : public ByteWriter
 {
 public:
-	FileWriter(FileReaderFile *f) : f(f) { assert(f); }
+	FileWriter(FILE *f) : f(f) { assert(f); }
 	virtual void write(const void *buffer, size_t len);
 	
 protected:
-	FileReaderFile *f;
+	FILE *f;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

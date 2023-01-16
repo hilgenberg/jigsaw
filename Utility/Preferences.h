@@ -67,6 +67,7 @@ namespace Preferences
 	PREFV(bool,        click);
 	#ifdef ANDROID
 	PREFV(bool,        vibrate);
+	PREFV(bool,        cached_license);
 	#endif
 
 

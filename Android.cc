@@ -12,22 +12,26 @@ static Window   *window = NULL;
 static Document  doc;
 static GUI       gui(doc);
 
-static void callback(JNIEnv *env, jobject obj, ButtonAction i)
+static JNIEnv   *env = NULL; // TODO: for how long are these valid?
+static jobject   obj = NULL;
+#define SAVE_CALLER do{ ::env = env; ::obj = obj; }while(0)
+
+void call_change_image()
 {
-	switch (i)
-	{
-		case CHANGE_IMAGE:
-		{
-			jclass cls = env->GetObjectClass(obj);
-			jmethodID mid = env->GetMethodID(cls, "changeImage", "()V");
-			assert(mid != 0);
-			env->CallVoidMethod(obj, mid);
-			break;
-		}
-		default:
-			if (window) window->button_action(i);
-			break;
-	}
+	assert(env && obj);
+	jclass cls = env->GetObjectClass(obj);
+	jmethodID mid = env->GetMethodID(cls, "changeImage", "()V");
+	assert(mid != 0);
+	env->CallVoidMethod(obj, mid);
+}
+
+void buy_license()
+{
+	assert(env && obj);
+	jclass cls = env->GetObjectClass(obj);
+	jmethodID mid = env->GetMethodID(cls, "buyLicense", "()V");
+	assert(mid != 0);
+	env->CallVoidMethod(obj, mid);
 }
 
 //-------------------------------------------------------------------------------------------------------
@@ -63,6 +67,16 @@ F(void, pause)
 
 	audio_pause();
 	delete renderer; renderer = NULL;
+}
+
+F(void, setLicensed)
+{
+	Preferences::cached_license(true);
+	Preferences::flush();
+}
+F(bool, findCachedLicense)
+{
+	return Preferences::cached_license();
 }
 
 FF(jboolean, setImage, jstring path_)
@@ -107,20 +121,22 @@ F(jint, draw)
 {
 	if (!renderer) return false;
 	renderer->draw();
-	int ret = (int)(bool)doc.needs_redraw() + 2 * pending_vibration;
+	int ret = (int)doc.needs_redraw() + 2 * (int)pending_vibration;
 	pending_vibration = false;
 	return ret;
 }
 
 FF(void, touchUni, jint ds, jint id, jfloat x, jfloat y)
 {
+	SAVE_CALLER;
 	if (!gui.handle_touch(ds, 1, &id, &x, &y))
-	if (window) window->handle_touch(ds, 1, &id, &x, &y, [env,obj](ButtonAction i){ callback(env, obj, i); });
+	if (window) window->handle_touch(ds, 1, &id, &x, &y);
 }
 
 FF(void, touchMulti, jint ds, jintArray id_, jfloatArray x_, jfloatArray y_)
 {
 	if (!window) return;
+	SAVE_CALLER;
 
 	int n = env->GetArrayLength(x_);
 	assert(n == env->GetArrayLength(y_));
@@ -129,7 +145,7 @@ FF(void, touchMulti, jint ds, jintArray id_, jfloatArray x_, jfloatArray y_)
 	jfloat *y = env->GetFloatArrayElements(y_, NULL);
 	jint  *id = env->GetIntArrayElements (id_, NULL);
 	if (!gui.handle_touch(ds, n, id, x, y))
-	try { window->handle_touch(ds, n, id, x, y, [env,obj](ButtonAction i){ callback(env, obj, i); }); } catch (...) {}
+	try { window->handle_touch(ds, n, id, x, y); } catch (...) {}
 	env->ReleaseFloatArrayElements(x_, x, JNI_ABORT);
 	env->ReleaseFloatArrayElements(y_, y, JNI_ABORT);
 	env->ReleaseIntArrayElements(id_, id, JNI_ABORT);

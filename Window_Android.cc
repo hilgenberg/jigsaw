@@ -14,7 +14,7 @@ static inline void drag_view(Camera &camera, const ScreenCoords &d)
 	camera.move(camera.dconvert(d));
 }
 
-void Window::handle_touch(int ds, int n, int *id, float *x, float *y, std::function<void(ButtonAction)> button_callback)
+void Window::handle_touch(int ds, int n, int *id, float *x, float *y)
 {
 	if (ds < 0 && n <= 0) // this is MotionEvent.ACTION_CANCEL
 	{
@@ -24,7 +24,7 @@ void Window::handle_touch(int ds, int n, int *id, float *x, float *y, std::funct
 	}
 	else if (ds < 0) // touches lifting
 	{
-		handle_touch(0, n, id, x, y, button_callback); // move to final position
+		handle_touch(0, n, id, x, y); // move to final position
 		for (int i = 0; i < n; ++i) pointer_state.erase(id[i]);
 
 		drop(); // even if something weird is going on and this is a different pointer
@@ -35,7 +35,7 @@ void Window::handle_touch(int ds, int n, int *id, float *x, float *y, std::funct
 			{
 				if (clicked_button != b.index) continue;
 				if (!button_hit(b, *x, *y)) break;
-				button_callback(b.index);
+				button_action(b.index);
 				break;
 			}
 		}

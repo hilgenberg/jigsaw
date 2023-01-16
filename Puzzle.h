@@ -34,14 +34,14 @@ struct Puzzle : public Serializable
 	typedef int     Piece;
 	typedef int     Group;
 	typedef uint8_t Border;
-	int W = 0, H = 0, N = 0; // number of pieces in x and y directions, N = W*H is total
-	std::vector<PuzzleCoords>  pos; // positions of the pieces (top-left corner, size is (1,1))
-	std::vector<Piece>  z; // draw in order z[0], z[1], ... (=> z[0] is bottom-most piece, z[N-1] top one)
-	std::vector<Group>  g; // which group is the piece in? -1 for none
-	std::vector<std::set<Piece>> groups; // luxury item, simplifies the algorithms
-	std::vector<bool> eh, ev; // horizontal and vertical edges, true = knob points away from zero
-	std::vector<Border> borders; // for easy transfer to shaders, computed from eh+ev
-	double sx = 1.0, sy = 1.0; // scaling factors for the pieces (internally this class uses w=h=1!)
+	int    W = 0, H = 0, N = 0; // number of pieces in x and y directions, N = W*H is total
+	double sx = 1.0, sy = 1.0;  // scaling factors for the pieces (internally this class uses w=h=1!)
+	std::vector<PuzzleCoords>    pos;     // positions of the pieces (top-left corner, size is (1,1))
+	std::vector<Piece>           z;       // draw in order z[0], z[1], ... (=> z[0] is bottom-most piece, z[N-1] top one)
+	std::vector<Group>           g;       // which group is the piece in? -1 for none
+	std::vector<std::set<Piece>> groups;  // luxury item, simplifies the algorithms
+	std::vector<bool>            eh, ev;  // horizontal and vertical edges, true = knob points away from zero
+	std::vector<Border>          borders; // for easy transfer to shaders, computed from eh and ev
 
 	struct Anim { PuzzleCoords dest, v; Anim() : dest(0.0, 0.0), v(0.0, 0.0) {} };
 	std::map<Piece, Anim> animations;
@@ -101,7 +101,8 @@ struct Puzzle : public Serializable
 
 	inline bool should_arrange(Piece i) const
 	{
-		return g[i] < 0 && !(Preferences::absolute_mode() && delta(i).absq() < 1e-12);
+		assert(i >= 0 && i < N);
+		return g[i] < 0 && !is_fixed(i);
 	}
 
 	static void overhang(EdgeType et, float &d1, float &d0)
@@ -123,7 +124,8 @@ struct Puzzle : public Serializable
 	{
 		assert(i >= 0 && i < N);
 		int x = i % W, y = i / W;
-		return x == 0 || x == W-1 || y == 0 || y == H-1;
+		//return x == 0 || x == W-1 || y == 0 || y == H-1;
+		return (i % W % (W-1)) * (i / W % (H-1)) == 0;
 	}
 	bool is_corner(Piece i) const
 	{
@@ -166,16 +168,16 @@ struct Puzzle : public Serializable
 
 	void sanity_checks() const
 	{
-		#if 0 //ndef NDEBUG
 		assert(W >= 0 && H >= 0);
-		assert(N == W*H);
-		assert(pos.size() == N);
-		assert(z.size() == N);
-		assert(ev.size() == H*(W-1));
-		assert(eh.size() == W*(H-1));
-		assert(groups.size() <= N/2);
+		assert(           W*H == N);
+		assert(    pos.size() == N);
+		assert(      z.size() == N);
+		assert(     ev.size() == H*(W-1));
+		assert(     eh.size() == W*(H-1));
+		assert( groups.size() <= N/2);
 		assert(borders.size() == N);
 
+		#if 0 //ndef NDEBUG
 		for (Piece p : z) assert(p >= 0 && p < N);
 		assert(std::set(z.begin(), z.end()).size() == N);
 		for (int i = 0; i < (int)groups.size(); ++i)
