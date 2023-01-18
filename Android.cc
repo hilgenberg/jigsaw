@@ -12,27 +12,23 @@ static Window   *window = NULL;
 static Document  doc;
 static GUI       gui(doc);
 
-static JNIEnv   *env = NULL; // TODO: for how long are these valid?
-static jobject   obj = NULL;
-#define SAVE_CALLER do{ ::env = env; ::obj = obj; }while(0)
+static thread_local JNIEnv   *env = NULL;
+static thread_local jobject   obj = NULL;
+#define SAVE_CALLER do{ assert(env); assert(obj); ::env = env; ::obj = obj; }while(0)
+#define CLEAR_CALLER do{ ::env = NULL; ::obj = NULL; }while(0)
 
-void call_change_image()
+static void call_java_view(const char *method)
 {
-	assert(env && obj);
-	jclass cls = env->GetObjectClass(obj);
-	jmethodID mid = env->GetMethodID(cls, "changeImage", "()V");
-	assert(mid != 0);
+	assert(env);
+	assert(obj);
+	jclass cls = env->GetObjectClass(obj); assert(cls != 0);
+	jmethodID mid = env->GetMethodID(cls, method, "()V"); assert(mid != 0);
 	env->CallVoidMethod(obj, mid);
 }
 
-void buy_license()
-{
-	assert(env && obj);
-	jclass cls = env->GetObjectClass(obj);
-	jmethodID mid = env->GetMethodID(cls, "buyLicense", "()V");
-	assert(mid != 0);
-	env->CallVoidMethod(obj, mid);
-}
+void call_change_image() { call_java_view("changeImage"); }
+void buy_license()       { call_java_view("buyLicense");  }
+void reload_license()    { call_java_view("reloadLicense");  }
 
 //-------------------------------------------------------------------------------------------------------
 // Exports
@@ -81,6 +77,7 @@ F(bool, findCachedLicense)
 
 FF(jboolean, setImage, jstring path_)
 {
+	SAVE_CALLER;
 	const char *s = env->GetStringUTFChars(path_, NULL);
 	std::string path(s, env->GetStringUTFLength(path_));
 	env->ReleaseStringUTFChars(path_, s);
@@ -107,22 +104,27 @@ FF(jboolean, setImage, jstring path_)
 	{
 		LOG_ERROR("Could not delete %s from cache: %s", prior.c_str(), err.what());
 	}
-
+	
+	CLEAR_CALLER;
 	return ok;
 }
 
 FF(void, resize, jint w, jint h)
 {
 	if (!renderer) return;
+	SAVE_CALLER;
 	window->reshape(w, h);
+	CLEAR_CALLER;
 }
 
 F(jint, draw)
 {
 	if (!renderer) return false;
+	SAVE_CALLER;
 	renderer->draw();
 	int ret = (int)doc.needs_redraw() + 2 * (int)pending_vibration;
 	pending_vibration = false;
+	CLEAR_CALLER;
 	return ret;
 }
 
@@ -131,6 +133,7 @@ FF(void, touchUni, jint ds, jint id, jfloat x, jfloat y)
 	SAVE_CALLER;
 	if (!gui.handle_touch(ds, 1, &id, &x, &y))
 	if (window) window->handle_touch(ds, 1, &id, &x, &y);
+	CLEAR_CALLER;
 }
 
 FF(void, touchMulti, jint ds, jintArray id_, jfloatArray x_, jfloatArray y_)
@@ -149,6 +152,7 @@ FF(void, touchMulti, jint ds, jintArray id_, jfloatArray x_, jfloatArray y_)
 	env->ReleaseFloatArrayElements(x_, x, JNI_ABORT);
 	env->ReleaseFloatArrayElements(y_, y, JNI_ABORT);
 	env->ReleaseIntArrayElements(id_, id, JNI_ABORT);
+	CLEAR_CALLER;
 }
 
 }; // extern "C"

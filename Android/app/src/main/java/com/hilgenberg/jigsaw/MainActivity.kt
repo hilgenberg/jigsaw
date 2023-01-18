@@ -5,19 +5,28 @@ import android.os.Bundle
 import android.util.Log
 import java.io.File
 
-
 class MainActivity : Activity()
 {
 	private lateinit var view: PuzzleView
+	private var license: License? = null
 
 	override fun onCreate(b: Bundle?) {
 		super.onCreate(b)
-
 		//StrictMode.setVmPolicy(VmPolicy.Builder(StrictMode.getVmPolicy()).detectLeakedClosableObjects().build())
-
 		view = PuzzleView(application, this)
 		setContentView(view)
 		view.requestRender()
+	}
+
+	fun checkLicense() : Boolean?
+	{
+		if (license == null) license = License(this)
+		return license!!.check()
+	}
+	fun buyLicense()
+	{
+		if (license == null) license = License(this)
+		license!!.buy()
 	}
 
 	override fun onResume() {
