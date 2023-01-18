@@ -165,9 +165,11 @@ Puzzle::Piece Puzzle::hit_test(const PuzzleCoords &p, const PuzzleCoords &radius
 		const int i = z[j]; if (FIXED(i)) continue;
 		const double px = pos[i].x, py = pos[i].y;
 		
+		// first check if there is any overlap at all
 		P2d c(x-px-0.5, y-py-0.5);
 		if (!ellipse_vs_rect(radius, c, 0.5+d, 0.5+d)) continue;
 
+		// intersection with total piece is upper bound for the area
 		double a = ellipse_vs_rect_overlap(radius, c, 0.5, 0.5);
 		if (a <= best_overlap) continue;
 		assert(a > 0.0);
@@ -182,8 +184,6 @@ Puzzle::Piece Puzzle::hit_test(const PuzzleCoords &p, const PuzzleCoords &radius
 		rel.set(x-px, y-py);
 		best_i = i;
 		best_overlap = a;
-
-		//if (!ellipse_vs_rect(radius, c, 0.5, 0.5)) continue;
 	}
 	#undef FIXED
 

@@ -78,8 +78,6 @@ namespace Preferences
 		catch (...) { LOG_ERROR("Error writing savegame %s!", p.c_str()); ok = false; }
 		fclose(F);
 		return ok;
-
-
 	}
 
 	bool load_state(Document &doc)
@@ -97,7 +95,11 @@ namespace Preferences
 			doc.load(s);
 			assert(s.done());
 		}
-		catch (...) { LOG_ERROR("Error reading savegame %s!", p.c_str()); ok = false; }
+		catch (...) {
+			LOG_ERROR("Error reading savegame %s!", p.c_str());
+			ok = false;
+			doc.load("///sample-data", 150);
+		}
 		fclose(F);
 		return ok;
 	}

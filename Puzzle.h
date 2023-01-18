@@ -123,7 +123,7 @@ struct Puzzle : public Serializable
 	bool is_edge_piece(Piece i) const
 	{
 		assert(i >= 0 && i < N);
-		int x = i % W, y = i / W;
+		//int x = i % W, y = i / W;
 		//return x == 0 || x == W-1 || y == 0 || y == H-1;
 		return (i % W % (W-1)) * (i / W % (H-1)) == 0;
 	}

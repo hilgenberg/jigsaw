@@ -70,10 +70,16 @@ namespace Preferences
 	PREFV(bool,        cached_license);
 	#endif
 
-
-
 	#undef PREFV
 	#undef PREFR
 
 	inline bool dark_mode() { return bg_color().lightness() < 0.5f; }
 };
+
+#ifdef LINUX
+inline constexpr bool license() { return true; }
+inline void buy_license() {}
+#else
+inline bool license() { return Preferences::cached_license(); }; // is this the full version?
+extern void buy_license(); // in Android.cc
+#endif

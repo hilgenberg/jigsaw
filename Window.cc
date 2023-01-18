@@ -6,11 +6,9 @@
 #include "Utility/Preferences.h"
 #include "Utility/GL_Util.h"
 #include "Utility/Timer.h"
-#include "Utility/Preferences.h"
 #include "Victory.h"
 #include "Puzzle_Tools.h"
 #include "GUI.h"
-#include "License.h"
 
 #ifdef LINUX
 extern volatile bool quit;
@@ -109,7 +107,11 @@ void Window::animate()
 
 void Window::button_action(ButtonAction a)
 {
+	#ifdef ANDROID
 	#define LIC_CHK if (!license()) gui.show(GUI::DIALOG); else
+	#else
+	#define LIC_CHK
+	#endif
 	switch (a)
 	{
 		case ARRANGE:      arrange(doc.puzzle, false, true, doc.tool == Tool::HIDE); start_animations(); break;
