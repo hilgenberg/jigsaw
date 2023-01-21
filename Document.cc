@@ -17,6 +17,8 @@ bool Document::load(const std::string &p, int N)
 {
 	#ifdef LINUX
 	if (N <= 0) N = Preferences::pieces();
+	#else
+	if (N <= 0) N = puzzle.N;
 	#endif
 	if (!puzzle.load(p)) return false;
 	puzzle.reset(puzzle.im.w(), puzzle.im.h(), N);

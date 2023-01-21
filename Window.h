@@ -26,6 +26,7 @@ public:
 	void animate();
 	void reshape(int w, int h);
 	void button_action(ButtonAction a);
+	void play_victory_animation();
 
 private:
 	Document     &doc;

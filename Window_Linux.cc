@@ -216,11 +216,7 @@ bool Window::handle_key(SDL_Keysym keysym, bool release)
 			return true;
 		#ifdef DEBUG
 		case SDLK_a:
-			if (!va)
-			{
-				va.reset(new VictoryAnimation(doc.puzzle, doc.camera));
-				start_animations();
-			}
+			play_victory_animation();
 			return true;
 		#endif
 	}

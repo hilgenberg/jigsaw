@@ -1,5 +1,6 @@
 #pragma once
 #include "Utility/Vector.h"
+#include "Coordinates.h"
 class Camera;
 
 enum ButtonAction
@@ -13,6 +14,7 @@ enum ButtonAction
 	CHANGE_IMAGE,
 	SETTINGS,
 	PREFERENCES,
+	HELP,
 	N_BUTTON_IMAGES
 };
 
@@ -23,7 +25,8 @@ struct Buttons
 	struct Button
 	{
 		ButtonAction index;
-		P2f          pos; // position of center
+		ScreenCoords pos; // position of center
+		const char  *help() const;
 	};
 	std::vector<Button> buttons;
 	P3f button_size {0, 0, 0}; // (w,h,spacing)

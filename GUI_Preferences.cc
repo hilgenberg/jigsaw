@@ -1,9 +1,6 @@
 #include "GUI.h"
 #include "Utility/Preferences.h"
 #include "data.h"
-#if defined(ANDROID) && defined(DEBUG)
-extern void reload_license();
-#endif
 
 #define SPC for (int i = 0; i < 5; ++i) ImGui::Spacing()
 
@@ -12,6 +9,19 @@ static constexpr int colorEditFlags =
 	ImGuiColorEditFlags_NoTooltip | //ImGuiColorEditFlags_AlphaBar |
 	ImGuiColorEditFlags_PickerHueWheel;
 
+static void Help(const char *desc)
+{
+	#ifdef LINUX
+	if (ImGui::IsItemActive() || !ImGui::IsItemHovered()) return;
+	#else
+	if (!ImGui::IsItemHovered()) return;
+	#endif
+	ImGui::BeginTooltip();
+	ImGui::PushTextWrapPos(ImGui::GetFontSize() * 20.0f);
+	ImGui::TextUnformatted(desc);
+	ImGui::PopTextWrapPos();
+	ImGui::EndTooltip();
+}
 
 void GUI::p_preferences()
 {
@@ -62,6 +72,10 @@ void GUI::p_preferences()
 	ImGui::Checkbox("Spiral Arrange", &b);
 	if (b != b0) Preferences::spiral(b);
 
+	b0 = Preferences::hide_help(); b = b0;
+	ImGui::Checkbox("Hide the Help Button", &b);
+	if (b != b0) { Preferences::hide_help(b); doc.buttons.reshape(doc.camera); }
+
 	SPC;
 	
 	ImVec2 min = ImGui::CalcTextSize("Button Scale: +123.456 XXX");
@@ -95,6 +109,7 @@ void GUI::p_preferences()
 	ImGuiIO &io = ImGui::GetIO();
 	float mf = 0.5f*0.25*std::min(io.DisplaySize.x, io.DisplaySize.y);
 	ImGui::SliderFloat("##Finger Radius", &f, 0.0f, mf, "Finger Radius", ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_NoInput);
+	Help("All pieces intersecting this circle are considered during hit testing.");
 	if (f != f0) Preferences::finger_radius(f);
 	if (ImGui::IsItemActive())
 	{
@@ -104,20 +119,21 @@ void GUI::p_preferences()
 		ImGui::GetWindowDrawList()->AddCircle(p, f, ImColor(1.0f, 1.0f, 0.4f), 0, 3.0f);
 		ImGui::Dummy(ImVec2(f * 2.0f + 8.0f, f * 2.0f + 10.0f));
 	}
-	else SPC;
 
-	#if defined(ANDROID) && defined(DEBUG)
-	b0 = Preferences::cached_license(); b = b0;
-	ImGui::Checkbox("Cached License (Debug!)", &b);
-	if (b != b0)
-	{
-		Preferences::cached_license(b);
-		reload_license();
-	}
-	SPC;
+	#ifdef ANDROID
+	b0 = Preferences::adaptive_touch(); b = b0;
+	ImGui::Checkbox("Adaptive Hit Test", &b);
+	if (b != b0) Preferences::adaptive_touch(b);
+	Help("Keeps track of where you tend to grab the pieces (like mostly on their bottom-right, f.e.) and favors the pieces near that position. If you want to train it, pick up some lone piece about 5 times the way you want it to think is optimal.");
 	#endif
 
-	if (ImGui::Button("Done", ImVec2(ImGui::GetContentRegionAvail().x, 0))) close();
+	SPC;
+
+	if (ImGui::Button("Done", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
+	{
+		Preferences::flush();
+		close();
+	}
 
 	ImGui::PopItemWidth();
 }

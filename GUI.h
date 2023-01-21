@@ -17,16 +17,21 @@ public:
 	bool handle_event(const SDL_Event &event);
 	#else
 	bool handle_touch(int ds, int n, int *id, float *x, float *y);
+	bool activate_secret_menu(int ds, int n, int *id, float *x, float *y);
+	bool handle_back_button();
 	#endif
 
 	enum Page
 	{
 		PREFERENCES,
 		SETTINGS, // puzzle settings (N, cropping, ...)
-		DIALOG // talking to the sales creature
+		DIALOG, // talking to the sales creature
+		SECRET_MENU,
+		HELP
 	};
 	void show(Page p)
 	{
+		if (visible && p == page && p != SECRET_MENU) { close(); return; }
 		if (!visible || page != p) doc.redraw(3);
 		visible = true;
 		page = p; init_page();
@@ -39,8 +44,8 @@ public:
 	bool visible = false; // static to keep this alive through Android's reinit
 
 private:
-	Page page = PREFERENCES;
 	Document &doc;
+	Page page = PREFERENCES;
 
 	#ifdef DEBUG
 	bool show_demo_window = false;
@@ -53,7 +58,15 @@ private:
 
 	void p_dialog();
 	int dlg = 0;
+	std::vector<int> trail;
+
+	void p_secret();
+
+	void p_help();
 
 	void init_page();
 
+	#ifdef ANDROID
+	int liftoff = 0; // workaround for an ImGui event queue limitation
+	#endif
 };

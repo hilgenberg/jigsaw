@@ -17,17 +17,6 @@ class Serializer;
 class Deserializer;
 
 /**
- * Type codes for all serializable objects - every class saved via Serializer::_object has to have one
- */
-
-enum class TypeCode
-{
-	NIL          =   0, ///< for saving a NULL
-	DUP          =   1, ///< saving something more than once
-	INVALID      =   2  // must be the last one
-};
-
-/**
  * Base for all classes that are written to files, copy&pasted or saved for undo
  */
 
@@ -36,7 +25,6 @@ class Serializable
 public:
 	virtual void save(Serializer   &s) const = 0;
 	virtual void load(Deserializer &s) = 0;
-	virtual TypeCode type_code() const{ return TypeCode::INVALID; }
 };
 
 /**

@@ -13,9 +13,9 @@ static std::string image_;
 static int         pieces_         = 256;
 #define DEFAULT_FINGER 0.0f
 #else
-#define DEFAULT_FINGER 40.0f
+#include "Timer.h"
+#define DEFAULT_FINGER 60.0f
 #endif
-
 
 static float       solution_alpha_ = 0.0f;
 static bool        absolute_mode_  = false;
@@ -28,38 +28,53 @@ static ScreenAlign button_align_   = CENTERED;
 static GL_Color    bg_color_(0.25);
 static float       finger_radius_  = DEFAULT_FINGER;
 static bool        click_          = true;
+static bool        hide_help_      = false;
 #ifdef ANDROID
 static bool        vibrate_        = false;
 static bool        cached_license_ = false;
+static bool        adaptive_touch_ = true;
 #endif
 
-void reset_all()
+#ifdef ANDROID
+bool ugly = false;
+double ugly_start_time = -1.0;
+bool license()
 {
-	#ifdef LINUX
-	pieces_         = 256;
-	image_          .clear();
-	#endif
-	edge_           = Regular;
-	Nmax_           = 1000;
-	solution_alpha_ = 0.0f;
-	absolute_mode_  = false;
-	button_scale_   = 0.0f;
-	spiral_         = false;
-	button_edge_    = LEFT;
-	button_align_   = CENTERED;
-	bg_color_       = GL_Color(0.25);
-	finger_radius_  = DEFAULT_FINGER;
-	click_          = true;
-	#ifdef ANDROID
-	vibrate_        = false;
-	cached_license_ = false;
-	#endif
+	if (Preferences::cached_license()) return true;
+	if (ugly && now() > ugly_start_time + 24*3600.0) ugly = false;
+	return ugly;
 }
+#endif
 
 static path cfg;
 
 namespace Preferences
 {
+	void reset_to_factory(bool keep_license)
+	{
+		#ifdef LINUX
+		pieces_         = 256;
+		image_          . clear();
+		#endif
+		edge_           = Regular;
+		Nmax_           = 1000;
+		solution_alpha_ = 0.0f;
+		absolute_mode_  = false;
+		button_scale_   = 0.0f;
+		spiral_         = false;
+		button_edge_    = LEFT;
+		button_align_   = CENTERED;
+		bg_color_       = GL_Color(0.25);
+		finger_radius_  = DEFAULT_FINGER;
+		click_          = true;
+		hide_help_      = false;
+		#ifdef ANDROID
+		vibrate_        = false;
+		if (!keep_license) cached_license_ = false;
+		adaptive_touch_ = true;
+		#endif
+	}
+
 	bool save_state(const Document &doc)
 	{
 		std::filesystem::path p = directory();
@@ -141,7 +156,7 @@ namespace Preferences
 
 	bool reset()
 	{
-		reset_all();
+		reset_to_factory();
 		load();
 		return true;
 	}
@@ -167,9 +182,11 @@ namespace Preferences
 	PREFV(bool,        spiral);
 	PREFV(float,       finger_radius);
 	PREFV(bool,        click);
+	PREFV(bool,        hide_help);
 	#ifdef ANDROID
 	PREFV(bool,        vibrate);
 	PREFV(bool,        cached_license);
+	PREFV(bool,        adaptive_touch);
 	#endif
 };
 
@@ -209,15 +226,23 @@ static bool load()
 		s.enum_  (button_align_, TOP_OR_LEFT, BOTTOM_OR_RIGHT);
 		s.float_ (finger_radius_);
 		s.bool_  (click_);
+		s.bool_  (hide_help_);
 		#ifdef ANDROID
 		s.bool_  (vibrate_);
 		int tmp; s.int32_ (tmp); cached_license_ = (tmp == 0x00040005);
+		s.bool_  (adaptive_touch_);
 		#endif
+	}
+	catch (std::exception &e)
+	{
+		LOG_ERROR("Exception while reading from preference file %s: %s!\n", cf.c_str(), e.what());
+		fclose(file);
+		return false;
 	}
 	catch (...)
 	{
 		LOG_ERROR("Exception while reading from preference file %s!\n", cf.c_str());
-		reset_all();
+		Preferences::reset_to_factory();
 		fclose(file);
 		return false;
 	}
@@ -233,9 +258,12 @@ static bool save()
 	FILE *file = fopen(cf.c_str(), "w");
 	if (!file)
 	{
-		LOG_ERROR("Cannot write to preference file %s!\n", cf.c_str());
+		LOG_ERROR("Cannot write to preference file %s!", cf.c_str());
 		return false;
 	}
+
+	LOG_DEBUG("Saving preferences...");
+
 	try
 	{
 		FileWriter fw(file);
@@ -254,10 +282,18 @@ static bool save()
 		s.enum_  ((int)button_align_, TOP_OR_LEFT, BOTTOM_OR_RIGHT);
 		s.float_ (finger_radius_);
 		s.bool_  (click_);
+		s.bool_  (hide_help_);
 		#ifdef ANDROID
 		s.bool_  (vibrate_);
 		s.int32_ (cached_license_ ? 0x00040005 : 0x00010000);
+		s.bool_  (adaptive_touch_);
 		#endif
+	}
+	catch (std::exception &e)
+	{
+		LOG_ERROR("Exception while writing to preference file %s: %s!\n", cf.c_str(), e.what());
+		fclose(file);
+		return false;
 	}
 	catch (...)
 	{

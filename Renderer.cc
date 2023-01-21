@@ -41,23 +41,7 @@ Renderer::Renderer(Document &doc, Window &window, GUI &gui, ANativeWindow *jni_w
 	// setup textures
 	//----------------------------------------------------------------------------
 
-	/* puzzle image */ {
-		const GL_Image &im = doc.puzzle.im;
-		assert(!texture);
-		glGenTextures(1, &texture);
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, im.w(), im.h(), 0, GL_RGBA, GL_UNSIGNED_BYTE, im.data().data());
-		glGenerateMipmap(GL_TEXTURE_2D);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-		float borderColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);  
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		GL_CHECK;
-	}
+	image_changed();
 
 	/* button images */ {
 		GL_Image im;
@@ -72,6 +56,7 @@ Renderer::Renderer(Document &doc, Window &window, GUI &gui, ANativeWindow *jni_w
 		ICON(CHANGE_IMAGE, ic_change_image);
 		ICON(SETTINGS,     ic_settings);
 		ICON(PREFERENCES,  ic_preferences);
+		ICON(HELP,         ic_help);
 		#undef ICON
 		
 		int w = tmp[0].w(), h = tmp[0].h();
@@ -259,6 +244,32 @@ Renderer::~Renderer()
 	glDeleteBuffers(2, button_VBO);
 	glDeleteTextures(1, &texture);
 	glDeleteTextures(1, &button_texture);
+}
+
+void Renderer::image_changed()
+{
+	#ifdef ANDROID
+	if (eglGetCurrentContext() != context) return;
+	#endif
+
+	if (texture) glDeleteTextures(1, &texture);
+
+	/* puzzle image */ {
+		const GL_Image &im = doc.puzzle.im;
+		glGenTextures(1, &texture);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, im.w(), im.h(), 0, GL_RGBA, GL_UNSIGNED_BYTE, im.data().data());
+		glGenerateMipmap(GL_TEXTURE_2D);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		float borderColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);  
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		GL_CHECK;
+	}
 }
 
 

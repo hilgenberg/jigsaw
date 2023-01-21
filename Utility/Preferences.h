@@ -37,6 +37,7 @@ namespace Preferences
 {
 	bool flush(); // store changes into registry/ini file
 	bool reset(); // reread from registry/disk
+	void reset_to_factory(bool keep_license = true);
 
 	bool save_state(const Document &doc);
 	bool load_state(      Document &doc);
@@ -65,9 +66,11 @@ namespace Preferences
 	PREFV(bool,        spiral);
 	PREFV(float,       finger_radius); // in pixels
 	PREFV(bool,        click);
+	PREFV(bool,        hide_help);
 	#ifdef ANDROID
 	PREFV(bool,        vibrate);
 	PREFV(bool,        cached_license);
+	PREFV(bool,        adaptive_touch);
 	#endif
 
 	#undef PREFV
@@ -80,6 +83,6 @@ namespace Preferences
 inline constexpr bool license() { return true; }
 inline void buy_license() {}
 #else
-inline bool license() { return Preferences::cached_license(); }; // is this the full version?
+extern bool license(); // is this the full version?
 extern void buy_license(); // in Android.cc
 #endif

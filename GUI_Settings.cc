@@ -6,8 +6,17 @@ static constexpr int slider_flags = ImGuiSliderFlags_AlwaysClamp|ImGuiSliderFlag
 void GUI::p_settings()
 {
 	static bool applied = true;
+	double m = 20.0, M = Preferences::Nmax();
 
-	double m = 20.0, M = Preferences::Nmax(), orig = tmp_N;
+	if (tmp_N < 0.0)
+	{
+		tmp_N = doc.puzzle.N;
+		applied = true;
+		if (tmp_N < m) { tmp_N = m; applied = false; }
+		if (tmp_N > M) { tmp_N = M; applied = false; }
+	}
+
+	double orig = tmp_N;
 	if (tmp_N < m) tmp_N = m;
 	if (tmp_N > M) tmp_N = M;
 
@@ -22,11 +31,14 @@ void GUI::p_settings()
 	if (tmp_N != orig) applied = false;
 
 	bool apply_ = false, close_ = false;
-	if (ImGui::Button("OK", ImVec2(ImGui::GetContentRegionAvail().x*0.33,0))) { apply_ = !applied; close_ = true; }
-	ImGui::SameLine();
+	if (!applied)
+	{
+		if (ImGui::Button("OK", ImVec2(ImGui::GetContentRegionAvail().x*0.33,0))) { apply_ = !applied; close_ = true; }
+		ImGui::SameLine();
+	}
 	if (ImGui::Button(applied ? "Reset" : "Apply", ImVec2(ImGui::GetContentRegionAvail().x*0.5,0))) apply_ = true;
 	ImGui::SameLine();
-	if (ImGui::Button("Close", ImVec2(ImGui::GetContentRegionAvail().x,0))) close_ = true;
+	if (ImGui::Button(applied ? "Close" : "Cancel", ImVec2(ImGui::GetContentRegionAvail().x,0))) close_ = true;
 
 	if (apply_)
 	{

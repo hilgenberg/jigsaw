@@ -40,6 +40,19 @@ class MainActivity : Activity()
 		super.onPause()
 	}
 
+	override fun onBackPressed()
+	{
+		if (view.back())
+		{
+			view.requestRender()
+		}
+		else
+		{
+			@Suppress("OverridingDeprecatedMember", "DEPRECATION")
+			super.onBackPressed()
+		}
+	}
+
 	override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?)
 	{
 		// only called from the image chooser (requestCode == 1)

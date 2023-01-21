@@ -10,7 +10,7 @@
 
 Serializer::Serializer(ByteWriter &f) : ver(CURRENT_VERSION), f(f)
 {
-	marker_("PUZZLE");
+	marker_("PZZL");
 	uint32_(ver);
 }
 
@@ -54,7 +54,7 @@ void Serializer::marker_(const char *s)
 
 Deserializer::Deserializer(ByteReader &f) : f(f)
 {
-	marker_("PUZZLE");
+	marker_("PZZL");
 	uint32_(ver);
 	if (ver < FILE_VERSION_1_0)
 	{

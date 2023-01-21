@@ -17,11 +17,10 @@ void GUI::init_page()
 	switch (page)
 	{
 		case PREFERENCES: break;
-		case SETTINGS:
-			tmp_N = doc.puzzle.N; break;
-		case DIALOG:
-			dlg = 0;
-			break;
+		case SETTINGS: tmp_N = -1.0; break;
+		case DIALOG: dlg = 0; trail.clear(); break;
+		case SECRET_MENU: break;
+		case HELP: break;
 		default: assert(false);
 	}
 }
@@ -29,6 +28,17 @@ void GUI::init_page()
 void GUI::draw()
 {
 	if (!visible) return;
+
+	#ifdef ANDROID
+	// we can't do this right after the button event, because then ImGui thinks that's
+	// where the cursor went *before* releasing the button
+	switch (liftoff)
+	{
+		case 2: --liftoff; break; // wait one frame
+		case 1: ImGui::GetIO().AddMousePosEvent(-FLT_MAX,-FLT_MAX); --liftoff; break;
+		default: break;
+	}
+	#endif
 
 	bool dark = Preferences::dark_mode();
 	if (dark) ImGui::StyleColorsDark(); else ImGui::StyleColorsLight();
@@ -40,7 +50,9 @@ void GUI::draw()
 	ImGui::SetNextWindowPos(center, page==DIALOG ? ImGuiCond_Always : ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 	//ImGui::SetNextWindowSize(screen.WorkSize, ImGuiCond_Always);
 
-	if (ImGui::Begin(format("##GUI Page %d", page).c_str(), NULL, 
+	if (page == HELP) 
+		p_help();
+	else if (ImGui::Begin(format("##GUI Page %d", page).c_str(), NULL, 
 		ImGuiWindowFlags_AlwaysAutoResize | 
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoResize |
@@ -50,11 +62,11 @@ void GUI::draw()
 		switch (page)
 		{
 			case PREFERENCES: p_preferences(); break;
-			case SETTINGS: p_settings(); break;
-			case DIALOG: p_dialog(); break;
-			default: assert(false);
+			case SETTINGS:    p_settings();    break;
+			case DIALOG:      p_dialog();      break;
+			case SECRET_MENU: p_secret();      break;
+			case HELP:        assert(false);   break;
 		}
-
 		ImGui::End();
 	}
 
@@ -72,9 +84,7 @@ bool GUI::handle_event(const SDL_Event &event)
 
 	bool activate = false, handled = false;
 
-	if (handled)
-	{}
-	else if (event.type == SDL_QUIT)
+	if (event.type == SDL_QUIT)
 	{
 		quit = true;
 		return true;
@@ -175,13 +185,30 @@ bool GUI::handle_event(const SDL_Event &event)
 #else
 bool GUI::handle_touch(int ds, int n, int *id, float *x, float *y)
 {
+	if (activate_secret_menu(ds, n, id, x, y)) { return true; liftoff = 0; }
 	if (!visible) return false;
+	if (page == HELP) return false;
 	doc.redraw(3);
 	ImGuiIO &io = ImGui::GetIO();
-	if (n <= 0) { io.AddMouseButtonEvent(0, false); return true; }
-	// TODO: at least keep track of how many fingers are down
+	if (n <= 0) { io.AddMouseButtonEvent(0, false); liftoff = 2; return true; }
 	io.AddMousePosEvent(*x, *y);
 	io.AddMouseButtonEvent(0, ds >= 0);
+	if (ds < 0) liftoff = 2; else liftoff = 0;
+	return io.WantCaptureMouse;
+}
+
+bool GUI::handle_back_button()
+{
+	if (!visible) return false;
+	if (page == DIALOG && trail.size() >= 2)
+	{
+		assert(dlg == trail.back());
+		trail.pop_back();
+		dlg = trail.back(); // no need to pop it, would only get re-pushed
+		doc.redraw(3);
+		return true;
+	}
+	close();
 	return true;
 }
 #endif

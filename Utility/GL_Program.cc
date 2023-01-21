@@ -151,6 +151,7 @@ void GL_Program::finish()
 
 #ifdef ANDROID
 #define INDEX_TX do{\
+	if (i < 0 || i >= (int)uniform_names.size()) LOG_ERROR("Invalid uniform: i = %d, n = %d!", i, (int)uniform_names.size());\
 	assert(i >= 0 && i < (int)uniform_names.size());\
 	i = uniform_locations[i]; }while (0)
 #else

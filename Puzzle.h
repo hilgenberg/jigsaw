@@ -57,6 +57,7 @@ struct Puzzle : public Serializable
 	void  magnetize(std::set<Piece> &I, PuzzleCoords dp); // recursively puts all touching pieces into magnet
 	bool  drop(std::set<Piece> &I, double delta_max); // returns true for new connections
 	Piece hit_test(const PuzzleCoords &p, const PuzzleCoords &radius, PuzzleCoords &rel) const; // skips all pieces with is_fixed(i)!
+	bool  hit_test(Piece i, const PuzzleCoords &p) const; // helper function
 
 	inline bool align(Piece i, Piece j, double delta_max) const // should they get connected?
 	{

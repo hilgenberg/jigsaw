@@ -23,6 +23,7 @@ public:
 
 	~Renderer();
 	void draw();
+	void image_changed();
 
 private:
 	Document &doc;

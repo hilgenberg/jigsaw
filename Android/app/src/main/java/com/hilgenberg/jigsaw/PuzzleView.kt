@@ -138,6 +138,7 @@ internal class PuzzleView(val context: Application, val activity: MainActivity) 
 	private external fun reinit(surface: Surface, data_path: String)
 	public  external fun setImage(path: String) : Boolean
 	private external fun pause()
+	public  external fun back() : Boolean
 	private external fun setLicensed()
 	private external fun findCachedLicense() : Boolean
 	private external fun draw() : Int

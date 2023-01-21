@@ -157,13 +157,6 @@ void Window::handle_touch(int ds, int n, int *id, float *x, float *y)
 			double f = sqrt(r0/r); // camera.zoom handles NAN and other garbage
 			doc.camera.zoom(f, (A+B)*0.5f);
 		}
-		#ifdef DEBUG
-		else if (!va)
-		{
-			va.reset(new VictoryAnimation(doc.puzzle, doc.camera));
-			start_animations();
-		}
-		#endif
 	}
 }
 

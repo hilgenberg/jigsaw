@@ -105,10 +105,17 @@ void Window::animate()
 	}
 }
 
+void Window::play_victory_animation()
+{
+	if (va) return;
+	va.reset(new VictoryAnimation(doc.puzzle, doc.camera));
+	start_animations();
+}
+
 void Window::button_action(ButtonAction a)
 {
 	#ifdef ANDROID
-	#define LIC_CHK if (!license()) gui.show(GUI::DIALOG); else
+	#define LIC_CHK if (!license()) { doc.tool = Tool::NONE; gui.show(GUI::DIALOG); } else
 	#else
 	#define LIC_CHK
 	#endif
@@ -126,10 +133,11 @@ void Window::button_action(ButtonAction a)
 			break;
 		case SETTINGS:     gui.show(GUI::SETTINGS); break;
 		case PREFERENCES:  gui.show(GUI::PREFERENCES); break;
+		case HELP:         gui.show(GUI::HELP); break;
 		case HIDE:   LIC_CHK doc.tool = (doc.tool==Tool::HIDE   ? Tool::NONE : Tool::HIDE);   break;
 		case SHOVEL: LIC_CHK doc.tool = (doc.tool==Tool::SHOVEL ? Tool::NONE : Tool::SHOVEL); break;
 		case MAGNET: LIC_CHK doc.tool = (doc.tool==Tool::MAGNET ? Tool::NONE : Tool::MAGNET); break;
-		default: return;
+		default: assert(false); return;
 	}
 	doc.redraw();
 }
@@ -169,11 +177,7 @@ void Window::drop()
 	if (drag_tool_drop(doc.puzzle, doc.camera, dragging, magnetized))
 	{
 		play_click();
-		if (doc.puzzle.solved() && !va)
-		{
-			va.reset(new VictoryAnimation(doc.puzzle, doc.camera));
-			start_animations();
-		}
+		if (doc.puzzle.solved() && !va) play_victory_animation();
 	}
 	dragging = -1;
 	drag_v.clear();

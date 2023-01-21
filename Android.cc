@@ -6,9 +6,13 @@
 #include "GUI.h"
 #include <jni.h>
 #include <android/native_window_jni.h>
+#include <mutex>
+
+static std::mutex rm;
+#define LOCK_RENDERER std::lock_guard<std::mutex> guard(rm)
 
 static Renderer *renderer = NULL;
-static Window   *window = NULL;
+       Window   *window = NULL; // GUI needs to see it
 static Document  doc;
 static GUI       gui(doc);
 
@@ -30,58 +34,9 @@ void call_change_image() { call_java_view("changeImage"); }
 void buy_license()       { call_java_view("buyLicense");  }
 void reload_license()    { call_java_view("reloadLicense");  }
 
-//-------------------------------------------------------------------------------------------------------
-// Exports
-//-------------------------------------------------------------------------------------------------------
-
-extern "C" {
-#define F(ret, name)       JNIEXPORT ret JNICALL Java_com_hilgenberg_jigsaw_PuzzleView_ ## name (JNIEnv *env, jclass obj)
-#define FF(ret, name, ...) JNIEXPORT ret JNICALL Java_com_hilgenberg_jigsaw_PuzzleView_ ## name (JNIEnv *env, jclass obj, __VA_ARGS__)
-FF(void, reinit, jobject surface, jstring path)
+bool set_image(const std::string &path)
 {
-	const char *s = env->GetStringUTFChars(path, NULL);
-	Preferences::directory(std::string(s, env->GetStringUTFLength(path)));
-	env->ReleaseStringUTFChars(path, s);
-
-	delete renderer; renderer = NULL;
-	delete window;   window   = NULL;
-	if (doc.puzzle.N < 9 && !Preferences::load_state(doc))
-	{
-		bool ok = doc.load("///sample-data", 150);
-		assert(ok);
-	}
-	ANativeWindow *jwin = ANativeWindow_fromSurface(env, surface);
-	assert(jwin != NULL); if (!jwin) return;
-	try { window = new Window(doc, gui); } catch (...) { return; }
-	try { renderer = new Renderer(doc, *window, gui, jwin); } catch (...) { delete window; window = NULL; return; }
-}
-
-F(void, pause)
-{
-	Preferences::flush();
-	Preferences::save_state(doc);
-
-	audio_pause();
-	delete renderer; renderer = NULL;
-}
-
-F(void, setLicensed)
-{
-	Preferences::cached_license(true);
-	Preferences::flush();
-}
-F(bool, findCachedLicense)
-{
-	return Preferences::cached_license();
-}
-
-FF(jboolean, setImage, jstring path_)
-{
-	SAVE_CALLER;
-	const char *s = env->GetStringUTFChars(path_, NULL);
-	std::string path(s, env->GetStringUTFLength(path_));
-	env->ReleaseStringUTFChars(path_, s);
-	
+	LOCK_RENDERER;
 	std::string prior = doc.puzzle.im_path;
 	int N = doc.puzzle.N; if (N < 9) N = 200;
 
@@ -105,12 +60,78 @@ FF(jboolean, setImage, jstring path_)
 		LOG_ERROR("Could not delete %s from cache: %s", prior.c_str(), err.what());
 	}
 	
+	if (ok && renderer) renderer->image_changed();
+	return ok;
+}
+
+//-------------------------------------------------------------------------------------------------------
+// Exports
+//-------------------------------------------------------------------------------------------------------
+
+extern "C" {
+#define F(ret, name)       JNIEXPORT ret JNICALL Java_com_hilgenberg_jigsaw_PuzzleView_ ## name (JNIEnv *env, jclass obj)
+#define FF(ret, name, ...) JNIEXPORT ret JNICALL Java_com_hilgenberg_jigsaw_PuzzleView_ ## name (JNIEnv *env, jclass obj, __VA_ARGS__)
+FF(void, reinit, jobject surface, jstring path)
+{
+	LOCK_RENDERER;
+	const char *s = env->GetStringUTFChars(path, NULL);
+	Preferences::directory(std::string(s, env->GetStringUTFLength(path)));
+	env->ReleaseStringUTFChars(path, s);
+
+	delete renderer; renderer = NULL;
+	delete window;   window   = NULL;
+	if (doc.puzzle.N < 9 && !Preferences::load_state(doc))
+	{
+		bool ok = doc.load("///sample-data", 150);
+		assert(ok);
+	}
+	ANativeWindow *jwin = ANativeWindow_fromSurface(env, surface);
+	assert(jwin != NULL); if (!jwin) return;
+	try { window = new Window(doc, gui); } catch (...) { return; }
+	try { renderer = new Renderer(doc, *window, gui, jwin); } catch (...) { delete window; window = NULL; return; }
+}
+
+F(void, pause)
+{
+	LOCK_RENDERER;
+	Preferences::flush();
+	Preferences::save_state(doc);
+
+	audio_pause();
+	delete renderer; renderer = NULL;
+}
+
+F(jboolean, back)
+{
+	if (!window) return false;
+	if (gui.handle_back_button()) return true;
+	return false;
+}
+
+F(void, setLicensed)
+{
+	Preferences::cached_license(true);
+	Preferences::flush();
+}
+F(bool, findCachedLicense)
+{
+	return Preferences::cached_license();
+}
+
+FF(jboolean, setImage, jstring path_)
+{
+	SAVE_CALLER;
+	const char *s = env->GetStringUTFChars(path_, NULL);
+	std::string path(s, env->GetStringUTFLength(path_));
+	env->ReleaseStringUTFChars(path_, s);
+	bool ok = set_image(path);
 	CLEAR_CALLER;
 	return ok;
 }
 
 FF(void, resize, jint w, jint h)
 {
+	LOCK_RENDERER;
 	if (!renderer) return;
 	SAVE_CALLER;
 	window->reshape(w, h);
@@ -119,6 +140,7 @@ FF(void, resize, jint w, jint h)
 
 F(jint, draw)
 {
+	LOCK_RENDERER;
 	if (!renderer) return false;
 	SAVE_CALLER;
 	renderer->draw();
@@ -130,14 +152,17 @@ F(jint, draw)
 
 FF(void, touchUni, jint ds, jint id, jfloat x, jfloat y)
 {
+	LOCK_RENDERER;
+	if (!window) return;
 	SAVE_CALLER;
-	if (!gui.handle_touch(ds, 1, &id, &x, &y))
-	if (window) window->handle_touch(ds, 1, &id, &x, &y);
+	if (gui.handle_touch(ds, 1, &id, &x, &y)) window->handle_touch(-1, 0, NULL,NULL,NULL);
+	else window->handle_touch(ds, 1, &id, &x, &y);
 	CLEAR_CALLER;
 }
 
 FF(void, touchMulti, jint ds, jintArray id_, jfloatArray x_, jfloatArray y_)
 {
+	LOCK_RENDERER;
 	if (!window) return;
 	SAVE_CALLER;
 
@@ -147,8 +172,8 @@ FF(void, touchMulti, jint ds, jintArray id_, jfloatArray x_, jfloatArray y_)
 	jfloat *x = env->GetFloatArrayElements(x_, NULL);
 	jfloat *y = env->GetFloatArrayElements(y_, NULL);
 	jint  *id = env->GetIntArrayElements (id_, NULL);
-	if (!gui.handle_touch(ds, n, id, x, y))
-	try { window->handle_touch(ds, n, id, x, y); } catch (...) {}
+	if (gui.handle_touch(ds, n, id, x, y)) window->handle_touch(-1, 0, NULL,NULL,NULL);
+	else try { window->handle_touch(ds, n, id, x, y); } catch (...) {}
 	env->ReleaseFloatArrayElements(x_, x, JNI_ABORT);
 	env->ReleaseFloatArrayElements(y_, y, JNI_ABORT);
 	env->ReleaseIntArrayElements(id_, id, JNI_ABORT);
