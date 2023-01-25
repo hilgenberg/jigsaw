@@ -4,14 +4,15 @@
 
 const char *Buttons::Button::help() const
 {
+	#define LIC(x) (license() ? x : x " ($)")
 	switch (index)
 	{
 	case ARRANGE:      return "Arrange pieces";
-	case EDGE_ARRANGE: return "Find edge pieces ($)";
+	case EDGE_ARRANGE: return LIC("Find edge pieces");
 	case RESET_VIEW:   return "Zoom to show all";
-	case HIDE:         return "Hide pieces ($)";
-	case SHOVEL:       return "Move multiple pieces ($)";
-	case MAGNET:       return "Magnetize piece ($)";
+	case HIDE:         return LIC("Hide pieces");
+	case SHOVEL:       return LIC("Move multiple pieces");
+	case MAGNET:       return LIC("Magnetize piece");
 	case CHANGE_IMAGE: return "Change image";
 	case SETTINGS:     return "Puzzle settings";
 	case PREFERENCES:  return "App preferences";
