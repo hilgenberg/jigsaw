@@ -11,26 +11,26 @@ class License(val activity: MainActivity)
 {
 	fun buy()
 	{
-		if (skud == null)
+		if (product == null)
 		{
 			pendingBuy = true
 			Log.e("JIGSAW", "Trying to buy but have no details yet!")
 			return
 		}
 		pendingBuy = false
-		billing.launchBillingFlow(activity, BillingFlowParams.newBuilder().setSkuDetails(skud!!).build())
+		billing.launchBillingFlow(activity, BillingFlowParams.newBuilder().setSkuDetails(product!!).build())
 			.takeIf { it.responseCode != BillingClient.BillingResponseCode.OK }
 			?.let { Log.e("BillingClient", "Failed to launch billing flow $it") }
 	}
 	fun check() : Boolean?
 	{
-		return lic
+		return licensed
 	}
 
-	private var billing: BillingClient
-	private var skud: SkuDetails? = null
-	private var lic: Boolean? = null
-	private var pendingBuy: Boolean = false
+	private var billing:    BillingClient
+	private var product:    SkuDetails? = null
+	private var licensed:   Boolean?    = null
+	private var pendingBuy: Boolean     = false
 
 	init
 	{
@@ -47,7 +47,7 @@ class License(val activity: MainActivity)
 				billing.acknowledgePurchase(AcknowledgePurchaseParams.newBuilder().setPurchaseToken(it.purchaseToken).build()) { r2 ->
 					if (r2.responseCode == BillingClient.BillingResponseCode.OK)
 					{
-						lic = true
+						licensed = true
 						Log.d("JIGSAW", "Purchase acknowledged.")
 					} else {
 						Log.e("JIGSAW", "Failed to acknowledge purchase $r2")
@@ -83,8 +83,8 @@ class License(val activity: MainActivity)
 		Log.d("JIGSAW", "SKU details arrived: $D, code $r")
 		if (D != null && D.isNotEmpty()) for (d in D) {
 			if (d.sku != "full_version") continue
-			skud = d
-			Log.d("JIGSAW", "Found $skud")
+			product = d
+			Log.d("JIGSAW", "Found $product")
 
 		}
 		if (pendingBuy) buy()
@@ -102,11 +102,11 @@ class License(val activity: MainActivity)
 		}
 
 		Log.d("JIGSAW", "Play Store sent purchases: $P")
-		lic = false
+		licensed = false
 		for (p in P)
 		{
 			if (p == null || p.purchaseState != Purchase.PurchaseState.PURCHASED) continue
-			p.products.forEach { if (it == "full_version") lic = true }
+			p.products.forEach { if (it == "full_version") licensed = true }
 		}
 	}
 }
