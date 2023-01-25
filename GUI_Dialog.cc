@@ -19,23 +19,23 @@ void GUI::p_dialog()
 	const auto dlg0 = dlg;
 	switch (dlg)
 	{
-		#define MSG(...) ImGui::Text(__VA_ARGS__)
+		#define MSG(...)  ImGui::Text(__VA_ARGS__)
 		#define ITEM(...) ImGui::Bullet(); ImGui::TextWrapped(__VA_ARGS__)
-		#define B(n,N,s) \
+		#define BUY       do{ buy_license(); close(); }while(0)
+		#define GO        dlg=
+		#define NEXT      ++dlg
+		#define ADD(n)    dlg += (n)
+		#define EXIT      close()
+		#define B(n,N,s)  \
 			if (n > 1) ImGui::SameLine(); else ImGui::Dummy(ImVec2(min.x, 0.25f*min.y));\
 			if (ImGui::Button(s, ImVec2(ImGui::GetContentRegionAvail().x / (float)(N-n+1), 0)))
-		#define BUY do{ buy_license(); close(); }while(0)
-		#define GO dlg=
-		#define NEXT ++dlg
-		#define ADD(n) dlg += (n)
-		#define EXIT close()
 		case 0:
 			MSG("Welcome to the advanced features! To use them, please buy the full version of this app. That will give you all the following features:");
 			ITEM("Up to 100.000 pieces");
 			ITEM("The edge arranger, which finds all the edge and corner pieces for you and then neatly arranges everything");
 			ITEM("The magnet tool, which moves several pieces at once by magnetizing the dragged pieces");
 			ITEM("The shovel tool, which moves all pieces inside a circle");
-			ITEM("The hide tool, which moves a piece and all similarly colored pieces out of sight (then use the arranger tools to get them back)");
+			ITEM("The hide tool, which moves a piece and all similarly colored pieces out of sight (use the arranger tools to get them back)");
 			MSG("Also, supporting the development and maintenance of this app is highly appreciated!");
 			B(1,1, "Sounds good. Take me to the store!") BUY;
 			B(1,2, "Maybe later") EXIT;
@@ -44,7 +44,7 @@ void GUI::p_dialog()
 			if (seen.size() > 10) { B(1,1, "But I haven't seen all the dialogue!") NEXT; }
 			break;
 		case 1:
-			#define TOTAL 20 // search for  ^\s*c[a]s(e) .+:  -- also check for N+1 breaks!
+			#define TOTAL 33 // search for  ^\s*c[a]s(e) .+:  -- also check for N+1 breaks!
 			assert(seen.size() <= TOTAL);
 			if (seen.size() >= TOTAL)
 			{
@@ -90,30 +90,47 @@ void GUI::p_dialog()
 		case 1100:
 			MSG("That really does not help you, when all you can do is click on buttons.");
 			B(1,1, "Ok, I'll buy it.") BUY;
-			B(1,1, "Yes, I'll buy it.") BUY;
-			B(1,1, "Oh no! I'll buy it.") BUY;
+			B(1,1, "Maybe later.") EXIT;
 			break;
 
 		case 1200:
-			MSG("Why don't you just crack it, then?");
-			B(1,1, "I'm too smart to waste so much time.") BUY;
-			B(1,1, "Maybe I'll do that, then.") NEXT;
+			MSG("Are you sure you don't want to not buy it?");
+			B(1,2, "Yes") BUY;
+			B(2,2, "No") NEXT;
 			break;
 		case 1201:
-			MSG("Fine.");
-			B(1,1, "Fine.") NEXT;
+			MSG("You're not unsure you don't want to not buy anything else?");
+			B(1,2, "Yes") NEXT;
+			B(2,2, "No") BUY;
 			break;
 		case 1202:
-			MSG("So, how are you going to do that?");
-			B(1,1, "I'll attack the Kotlin/Java parts.") NEXT;
-			B(1,1, "I'll attack the C++ parts.") NEXT;
-			B(1,1, "I'll attack the Google servers.") NEXT;
-			B(1,1, "I'll attack something else.") NEXT;
-			B(1,1, "I've changed my mind.") BUY;
+			MSG("But when you're not saying that you're not so sure, but still somewhat sure that you don't want to not buy it anytime but now, you're lying, right?");
+			B(1,2, "Yes") NEXT;
+			B(2,2, "No") BUY;
 			break;
 		case 1203:
-			MSG("Well, good luck! Buy it anyway, tell me how it went ;-)");
-			B(1,1, "OK") EXIT;
+			MSG("But what if nobody was to not say that you never wanted not to not definitely not buy it, would that be untrue?");
+			B(1,2, "Yes") NEXT;
+			B(2,2, "No") BUY;
+			break;
+		case 1204:
+			MSG("Yes?");
+			B(1,2, "No.") BUY;
+			B(2,2, "Yes!") NEXT;
+			break;
+		case 1205:
+			MSG("Well, alright, but you're not getting the proper full version with the secret menu, I'm just unlocking everything else for a while. Ok?");
+			B(1,2, "Yes, do it!") { ugly = true; ugly_start_time = now(); NEXT; }
+			B(2,2, "Nevermind.") GO 0;
+			break;
+		case 1206:
+			MSG("Done.");
+			B(1,2, "OK") EXIT;
+			B(2,2, "Wait, undo!") { ugly = false; NEXT; }
+			break;
+		case 1207:
+			MSG("Ok, undone.");
+			B(1,1, "Ok") EXIT;
 			break;
 
 		case 1300:
@@ -142,32 +159,35 @@ void GUI::p_dialog()
 			break;
 		case 1305:
 			MSG("Ok, done.");
-			B(1,2, "Cool") EXIT;
 			B(2,2, "Thanks") EXIT;
-			B(1,1, "Haha, you idiot!") { ugly = false; NEXT; }
+			B(1,1, "Wait, no, don't!") { ugly = false; NEXT; }
 			break;
 		case 1306:
-			MSG("Pfff, undone.");
-			B(1,2, ":(") EXIT;
-			B(2,2, "Hmpf") EXIT;
+			MSG("Ok, undone.");
+			B(1,1, "Ok") EXIT;
 			break;
 
 		case 1400:
-			MSG("Great! Well, the experts say you should buy it! They say you should buy it right now, actually!");
+			MSG("Great! Well, the experts say you should buy it!");
 			B(1,1, "Oh, ok, I'll buy it!") BUY;
-			B(1,1, "I don't care.") NEXT;
-			B(1,1, "You're lying.") NEXT;
+			B(1,1, "I don't believe that.") NEXT;
+			B(1,1, "They're lying.") NEXT;
 			break;
 		case 1401:
 			MSG("No, really, it's the science. Come on!");
 			B(1,1, "Oh, ok, I'll buy it!") BUY;
-			B(1,1, "Rubbish.") NEXT;
+			B(1,1, "I don't believe that.") NEXT;
+			B(1,1, "You're lying.") NEXT;
 			break;
 		case 1402:
+			MSG("But everybody else bought it!");
+			B(1,1, "Oh, ok, I'll buy it too!") BUY;
+			B(1,1, "I don't believe that.") NEXT;
+			B(1,1, "You're lying.") NEXT;
+			break;
+		case 1403:
 			MSG("Well, how stupid can you be then!");
-			B(1,3, "Hm") GO 0;
-			B(2,3, "Err") GO 0;
-			B(3,3, "...") GO 0;
+			B(1,1, "...") EXIT;
 			break;
 
 		//---------------------------------------------------------------------------------------
@@ -175,14 +195,13 @@ void GUI::p_dialog()
 		//---------------------------------------------------------------------------------------
 		case 2000:
 			MSG("If enough people buy it, I've got some neat features planned...");
-			B(1,1,"Will I get them for free?") GO 2100;
 			B(1,1,"Like what?") ADD(2);
+			B(1,1,"Will I get them for free?") GO 2100;
 			B(1,1,"I don't know") NEXT;
 			break;
 		case 2001:
 			MSG("I don't know either...");
 			B(1,1,"Oh no!") EXIT;
-			B(1,1,"I don't know") ADD(-1);
 			break;
 		case 2002:
 			MSG("Like rotation of the pieces and a new victory animation to go along with that.");
@@ -200,7 +219,7 @@ void GUI::p_dialog()
 			B(1,1,"Cool, I'll buy it") BUY;
 			break;
 		case 2005:
-			MSG("Builtin image search to find good high-resolution ones to use.");
+			MSG("Some sort of image search to find good high-resolution ones to use with higher piece counts.");
 			B(1,1,"What else?") NEXT;
 			B(1,1,"Neat, I'll buy it") BUY;
 			break;
@@ -211,7 +230,7 @@ void GUI::p_dialog()
 			break;
 		case 2007:
 			MSG("If there's something else, that you're missing, send email to th@zoon.cc");
-			B(1,1,"OK") EXIT;
+			B(1,1,"OK") GO 0;
 			break;
 
 		case 2100: // "Will I get them for free?"
