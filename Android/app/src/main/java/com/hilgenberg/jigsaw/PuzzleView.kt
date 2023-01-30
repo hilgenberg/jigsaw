@@ -136,6 +136,14 @@ internal class PuzzleView(val context: Application, val activity: MainActivity) 
 		Log.d("JIGSAW", "Reloading license")
 		lic = LicState.UNKNOWN
 	}
+	fun licenseChanged()
+	{
+		if (lic == LicState.NO && activity.checkLicense() == true)
+		{
+			setLicensed()
+			lic = LicState.YES
+		}
+	}
 
 	fun vibrate()
 	{

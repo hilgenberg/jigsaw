@@ -9,6 +9,22 @@ class License(val activity: MainActivity)
 	, SkuDetailsResponseListener
 	, PurchasesResponseListener
 {
+	private var billing:    BillingClient
+	private var product:    SkuDetails? = null
+	private var licensed:   Boolean?    = null
+	private var pendingBuy: Boolean     = false
+
+	init
+	{
+		billing = BillingClient.newBuilder(activity).setListener(this).enablePendingPurchases().build()
+		billing.startConnection(this)
+	}
+
+	fun check() : Boolean?
+	{
+		return licensed
+	}
+
 	fun buy()
 	{
 		if (product == null)
@@ -22,21 +38,6 @@ class License(val activity: MainActivity)
 			.takeIf { it.responseCode != BillingClient.BillingResponseCode.OK }
 			?.let { Log.e("BillingClient", "Failed to launch billing flow $it") }
 	}
-	fun check() : Boolean?
-	{
-		return licensed
-	}
-
-	private var billing:    BillingClient
-	private var product:    SkuDetails? = null
-	private var licensed:   Boolean?    = null
-	private var pendingBuy: Boolean     = false
-
-	init
-	{
-		billing = BillingClient.newBuilder(activity).setListener(this).enablePendingPurchases().build()
-		billing.startConnection(this)
-	}
 
 	override fun onPurchasesUpdated(r: BillingResult, P: MutableList<Purchase>?)
 	{
@@ -47,8 +48,10 @@ class License(val activity: MainActivity)
 				billing.acknowledgePurchase(AcknowledgePurchaseParams.newBuilder().setPurchaseToken(it.purchaseToken).build()) { r2 ->
 					if (r2.responseCode == BillingClient.BillingResponseCode.OK)
 					{
+						val wasLicensed = (licensed==true)
 						licensed = true
 						Log.d("JIGSAW", "Purchase acknowledged.")
+						if (!wasLicensed) activity.licenseChanged()
 					} else {
 						Log.e("JIGSAW", "Failed to acknowledge purchase $r2")
 					}
@@ -101,12 +104,16 @@ class License(val activity: MainActivity)
 			return
 		}
 
+		val wasLicensed = (licensed==true)
 		Log.d("JIGSAW", "Play Store sent purchases: $P")
 		licensed = false
 		for (p in P)
 		{
 			if (p == null || p.purchaseState != Purchase.PurchaseState.PURCHASED) continue
-			p.products.forEach { if (it == "full_version") licensed = true }
+			p.products.forEach { if (it == "full_version") {
+				licensed = true
+				if (!wasLicensed) activity.licenseChanged()
+			} }
 		}
 	}
 }

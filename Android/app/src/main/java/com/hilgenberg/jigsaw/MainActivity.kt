@@ -28,6 +28,7 @@ class MainActivity : Activity()
 		if (license == null) license = License(this)
 		license!!.buy()
 	}
+	fun licenseChanged() { view.licenseChanged() }
 
 	override fun onResume() {
 		super.onResume()
