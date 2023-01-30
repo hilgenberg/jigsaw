@@ -1,5 +1,6 @@
 #include "GUI.h"
 #include "Utility/Preferences.h"
+#include "Audio.h"
 #include "data.h"
 
 #define SPC for (int i = 0; i < 5; ++i) ImGui::Spacing()
@@ -60,12 +61,16 @@ void GUI::p_preferences()
 
 	b0 = Preferences::click(); b = b0;
 	ImGui::Checkbox("Click When Connecting", &b);
-	if (b != b0) Preferences::click(b);
+	if (b != b0) { Preferences::click(b); if (b) { play_click(); 
+		#ifdef ANDROID
+		pending_vibration = false;
+		#endif
+	} }
 
 	#ifdef ANDROID
 	b0 = Preferences::vibrate(); b = b0;
 	ImGui::Checkbox("Vibrate When Connecting", &b);
-	if (b != b0) Preferences::vibrate(b);
+	if (b != b0) { Preferences::vibrate(b); if (b) pending_vibration = true; }
 	#endif
 
 	b0 = Preferences::spiral(); b = b0;
