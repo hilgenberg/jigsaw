@@ -40,7 +40,7 @@ struct GL_Image final
 	
 	unsigned char *redim(unsigned w, unsigned h)
 	{
-		try{ _data.resize(_w * _h * 4); } catch (...) { return NULL; }
+		try{ _data.resize(w * h * 4); } catch (...) { return NULL; }
 		_w = w; _h = h;
 		return _data.data();
 	}
