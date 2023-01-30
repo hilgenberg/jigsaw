@@ -21,7 +21,7 @@ void GUI::p_dialog()
 	{
 		#define MSG(...)  ImGui::Text(__VA_ARGS__)
 		#define ITEM(...) ImGui::Bullet(); ImGui::TextWrapped(__VA_ARGS__)
-		#define BUY       do{ buy_license(); close(); }while(0)
+		#define BUY       do{ close(); buy_license(); }while(0)
 		#define GO        dlg=
 		#define NEXT      ++dlg
 		#define ADD(n)    dlg += (n)
@@ -34,7 +34,7 @@ void GUI::p_dialog()
 			ITEM("Up to 100.000 pieces");
 			ITEM("The edge arranger, which finds all the edge and corner pieces for you and then neatly arranges everything");
 			ITEM("The magnet tool, which moves several pieces at once by magnetizing the dragged pieces");
-			ITEM("The shovel tool, which moves all pieces inside a circle");
+			ITEM("The shovel tool, which moves all pieces inside an area");
 			ITEM("The hide tool, which moves a piece and all similarly colored pieces out of sight (use the arranger tools to get them back)");
 			MSG("Also, supporting the development and maintenance of this app is highly appreciated!");
 			B(1,1, "Sounds good. Take me to the store!") BUY;
@@ -44,7 +44,7 @@ void GUI::p_dialog()
 			if (seen.size() > 10) { B(1,1, "But I haven't seen all the dialogue!") NEXT; }
 			break;
 		case 1:
-			#define TOTAL 33 // search for  ^\s*c[a]s(e) .+:  -- also check for N+1 breaks!
+			#define TOTAL 30 // search for  ^\s*c[a]s(e) .+:  -- also check for N+1 breaks!
 			assert(seen.size() <= TOTAL);
 			if (seen.size() >= TOTAL)
 			{
@@ -72,15 +72,16 @@ void GUI::p_dialog()
 		case 2:
 			MSG("It's in the 4 corners. But only in the full version, not the temporarily unlocked one. Nothing too fancy, just some debugging goodies, you might like to play with - I'll try to add something nice in every new version.");
 			B(1,1, "Ok, guess I can buy it now!") BUY;
-			B(1,1, "Ok. But, I'll keep on pretending to be ugly.") GO 1303;
-			B(1,1, "Hm. Ok.") EXIT;
+			B(1,1, "I'll use the ugly demo for a while.") GO 1303;
+			B(1,1, "I'll use the smart demo for a while.") GO 1204;
+			B(1,1, "Ok") EXIT;
 			break;
 
-		//---------------------------------------------------------------------------------------
+		//-----------------------------------------------------------------------------------
 		// 1000..1999: "Can't I get that for free?"
-		//---------------------------------------------------------------------------------------
+		//-----------------------------------------------------------------------------------
 		case 1000:
-			MSG("Absolutely not! Why would I give you a free license?");
+			MSG("Why on earth would you get that for free?");
 			B(1,1,"Because I'm pretty") GO 1100;
 			B(1,1,"Because I'm smart")  GO 1200;
 			B(1,1,"Because I'm ugly")   GO 1300;
@@ -88,10 +89,12 @@ void GUI::p_dialog()
 			break;
 
 		case 1100:
-			MSG("That really does not help you, when all you can do is click on buttons.");
+			MSG("Good for you! Good for everybody that can see you. But this app can't see you.");
 			B(1,1, "Ok, I'll buy it.") BUY;
 			B(1,1, "Maybe later.") EXIT;
 			break;
+
+		//----------------------------------------------------------------------------------
 
 		case 1200:
 			MSG("Are you sure you don't want to not buy it?");
@@ -133,110 +136,100 @@ void GUI::p_dialog()
 			B(1,1, "Ok") EXIT;
 			break;
 
+		//----------------------------------------------------------------------------------
+
 		case 1300:
 			MSG("Are you serious?");
 			B(1,2, "No") GO 0;
 			B(2,2, "Yes") NEXT;
 			break;
 		case 1301:
-			MSG("Poor creature. Well, at least you're not stupid...");
-			B(1,1, "Yes, that's something...") GO 0;
+			MSG("Poor creature. Well, at least you're not stupid.");
+			B(1,1, "Yes, that's something.") GO 0;
 			B(1,1, "I'm stupid too.") NEXT;
 			break;
 		case 1302:
 			MSG("Do you at least have friends?");
-			B(1,1, "Yes, I do :)") GO 0;
-			B(1,1, "No, nobody likes me :(") NEXT;
+			B(1,1, "Yes, I do") GO 0;
+			B(1,1, "No, nobody likes me") NEXT;
 			break;
 		case 1303: // jumping here from the completionist
 			MSG("...");
 			B(1,1, "...") NEXT;
 			break;
 		case 1304:
-			MSG("Well, maybe solving some puzzles would be good for your self esteem... I can't give you the proper license but I could unlock all the features for a while.");
+			MSG("Well, maybe solving some puzzles would be good for your self esteem. I can't give you the proper license but I could unlock all the features for a while.");
 			B(1,2, "Yes, do it!") { ugly = true; ugly_start_time = now(); NEXT; }
 			B(2,2, "Nevermind.") GO 0;
 			break;
 		case 1305:
 			MSG("Ok, done.");
-			B(2,2, "Thanks") EXIT;
-			B(1,1, "Wait, no, don't!") { ugly = false; NEXT; }
+			B(1,2, "Thanks") EXIT;
+			B(2,2, "Wait, undo!") { ugly = false; NEXT; }
 			break;
 		case 1306:
 			MSG("Ok, undone.");
 			B(1,1, "Ok") EXIT;
 			break;
 
+		//----------------------------------------------------------------------------------
+
 		case 1400:
-			MSG("Great! Well, the experts say you should buy it!");
+			MSG("Great! Well, all the experts say you should buy it!");
 			B(1,1, "Oh, ok, I'll buy it!") BUY;
 			B(1,1, "I don't believe that.") NEXT;
-			B(1,1, "They're lying.") NEXT;
 			break;
 		case 1401:
-			MSG("No, really, it's the science. Come on!");
+			MSG("No, really, the science says so!");
 			B(1,1, "Oh, ok, I'll buy it!") BUY;
 			B(1,1, "I don't believe that.") NEXT;
-			B(1,1, "You're lying.") NEXT;
 			break;
 		case 1402:
 			MSG("But everybody else bought it!");
 			B(1,1, "Oh, ok, I'll buy it too!") BUY;
 			B(1,1, "I don't believe that.") NEXT;
-			B(1,1, "You're lying.") NEXT;
 			break;
 		case 1403:
-			MSG("Well, how stupid can you be then!");
+			MSG("Well, how stupid could you be then!");
 			B(1,1, "...") EXIT;
 			break;
 
-		//---------------------------------------------------------------------------------------
+		//-----------------------------------------------------------------------------------
 		// 2000..2999: "I don't know"
-		//---------------------------------------------------------------------------------------
+		//-----------------------------------------------------------------------------------
 		case 2000:
-			MSG("If enough people buy it, I've got some neat features planned...");
-			B(1,1,"Like what?") ADD(2);
+			MSG("If people actually buy this, I've got some neat features planned...");
+			B(1,1,"Like what?") NEXT;
 			B(1,1,"Will I get them for free?") GO 2100;
-			B(1,1,"I don't know") NEXT;
+			B(1,1,"I don't care") EXIT;
 			break;
 		case 2001:
-			MSG("I don't know either...");
-			B(1,1,"Oh no!") EXIT;
-			break;
-		case 2002:
 			MSG("Like rotation of the pieces and a new victory animation to go along with that.");
+			MSG("Also, cropping of the images, so you can cut away the parts with no details.");
 			B(1,1,"Anything else?") NEXT;
 			B(1,1,"OK, I'll buy it") BUY;
 			break;
-		case 2003:
-			MSG("Cropping of the images, so you can cut away the parts with no details.");
-			B(1,1,"What else?") NEXT;
-			B(1,1,"OK, I'll buy it") BUY;
-			break;
-		case 2004:
+		case 2002:
 			MSG("Support for animated GIFs.");
+			MSG("Maybe some sort of image search to find good high-resolution ones to use with higher piece counts.");
 			B(1,1,"What else?") NEXT;
 			B(1,1,"Cool, I'll buy it") BUY;
 			break;
-		case 2005:
-			MSG("Some sort of image search to find good high-resolution ones to use with higher piece counts.");
-			B(1,1,"What else?") NEXT;
-			B(1,1,"Neat, I'll buy it") BUY;
-			break;
-		case 2006:
+		case 2003:
 			MSG("A new tool that finds all pieces that would fit into some empty spot, using gestures instead of the buttons, improve the hide tool, optionally draw borders and/or shadows around the pieces, ...");
 			B(1,1,"What else?") NEXT;
 			B(1,1,"Neat, I'll buy it") BUY;
 			break;
-		case 2007:
-			MSG("If there's something else, that you're missing, send email to th@zoon.cc");
+		case 2004:
+			MSG("If you have any ideas, that are still missing, use the contact button!");
 			B(1,1,"OK") GO 0;
 			break;
 
 		case 2100: // "Will I get them for free?"
-			MSG("Yes, I don't like profit maximization at all costs. This is just a one-time purchase like in the shareware of old - no subscriptions, no coins, no Skinner-Box manipulation.");
+			MSG("Yes, this is like the shareware of old: just a one-time purchase - no subscriptions, no coins, no Skinner box manipulation (and by the way, also no spyware, notification spam or begging for likes and reviews), good for all further versions.");
 			B(1,1,"OK, I'll buy it") BUY;
 			B(1,1,"Maybe later") EXIT;
+			B(1,1,"What else?") GO 2000;
 			break;
 
 		default:

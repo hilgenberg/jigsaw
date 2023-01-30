@@ -2,12 +2,14 @@ package com.hilgenberg.jigsaw
 import android.app.Activity
 import android.app.Application
 import android.content.Intent
+import android.net.Uri
 import android.opengl.GLSurfaceView
 import android.os.Vibrator
 import android.util.Log
 import android.view.MotionEvent
 import android.view.Surface
 import androidx.core.app.ActivityCompat.startActivityForResult
+import androidx.core.content.ContextCompat.startActivity
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -103,6 +105,18 @@ internal class PuzzleView(val context: Application, val activity: MainActivity) 
 			startActivityForResult(activity, Intent.createChooser(intent, "Select Picture"), 1 /*requestCode*/, null)
 		} catch (ex: Exception) {
 			Log.e("JIGSAW", "change_image: $ex")
+		}
+	}
+	fun sendEmail()
+	{
+		val email = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"))
+		email.putExtra(Intent.EXTRA_EMAIL,   arrayOf("th@zoon.cc"))
+		email.putExtra(Intent.EXTRA_SUBJECT, "Jigsaw Feedback")
+		email.putExtra(Intent.EXTRA_TEXT,    "(If this is a bug report, please include all the necessary steps to reproduce the problem! Maybe even include some relevant screenshots. Otherwise I probably can't do anything useful with it!)")
+		try {
+			startActivity(activity, Intent.createChooser(email, "Choose an Email client :"), null)
+		} catch (ex: Exception) {
+			Log.e("JIGSAW", "send_email: $ex")
 		}
 	}
 

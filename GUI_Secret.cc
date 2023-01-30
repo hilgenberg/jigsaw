@@ -48,6 +48,8 @@ void GUI::p_secret()
 	}
 	#endif
 	if (ImGui::Button("Run Dialog Again", ImVec2(ImGui::GetContentRegionAvail().x,0))) show(DIALOG);
+
+	#if defined(ANDROID) && defined(DEBUG)
 	if (ImGui::Button("Reset Preferences", ImVec2(ImGui::GetContentRegionAvail().x,0)))
 	{
 		Preferences::reset_to_factory();
@@ -55,7 +57,6 @@ void GUI::p_secret()
 		doc.redraw();
 	}
 
-	#if defined(ANDROID) && defined(DEBUG)
 	bool b0 = Preferences::cached_license(), b = b0;
 	ImGui::Checkbox("Cached License (Debug!)", &b);
 	if (b != b0)

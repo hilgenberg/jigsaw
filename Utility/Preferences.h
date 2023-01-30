@@ -82,7 +82,9 @@ namespace Preferences
 #ifdef LINUX
 inline constexpr bool license() { return true; }
 inline void buy_license() {}
+inline void send_email() {}
 #else
 extern bool license(); // is this the full version?
 extern void buy_license(); // in Android.cc
+extern void send_email(); // in Android.cc
 #endif

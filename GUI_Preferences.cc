@@ -88,15 +88,14 @@ void GUI::p_preferences()
 		doc.buttons.reshape(doc.camera);
 	}
 	
-	//ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x*0.5f);
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x*0.5f);
 	static const char *button_edges[] = {"Left", "Right", "Top", "Bottom"};
 	i = i0 = Preferences::button_edge();
 	ImGui::Combo("##Button Placement", &i, button_edges, 4);
 	if (i != i0) { Preferences::button_edge((ScreenEdge)i); doc.buttons.reshape(doc.camera); }
 	bool button_v = (i == LEFT || i == RIGHT);
-	
-	//ImGui::SameLine();
-	//ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 	static const char *button_align_h[] = {"Left", "Center", "Right"};
 	static const char *button_align_v[] = {"Top", "Center", "Bottom"};
 	i = i0 = Preferences::button_align();
@@ -109,7 +108,7 @@ void GUI::p_preferences()
 	ImGuiIO &io = ImGui::GetIO();
 	float mf = 0.5f*0.25*std::min(io.DisplaySize.x, io.DisplaySize.y);
 	ImGui::SliderFloat("##Finger Radius", &f, 0.0f, mf, "Finger Radius", ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_NoInput);
-	Help("All pieces intersecting this circle are considered during hit testing.");
+	Help("Pieces intersecting this circle are considered during hit testing.");
 	if (f != f0) Preferences::finger_radius(f);
 	if (ImGui::IsItemActive())
 	{
@@ -125,7 +124,19 @@ void GUI::p_preferences()
 	ImGui::Checkbox("Adaptive Hit Test", &b);
 	if (b != b0) Preferences::adaptive_touch(b);
 	Help("Keeps track of where you tend to grab the pieces (like mostly on their bottom-right, f.e.) and favors the pieces near that position. If you want to train it, pick up some lone piece about 5 times the way you want it to think is optimal.");
+
+	if (!Preferences::cached_license())
+	{
+		SPC;
+
+		if (ImGui::Button("Upgrade to Full Version", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
+		{
+			close();
+			buy_license();
+		}
+	}
 	#endif
+
 
 	SPC;
 
@@ -133,6 +144,12 @@ void GUI::p_preferences()
 	{
 		Preferences::flush();
 		close();
+	}
+	if (ImGui::Button("Contact Developer", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
+	{
+		Preferences::flush();
+		close();
+		send_email();
 	}
 
 	ImGui::PopItemWidth();

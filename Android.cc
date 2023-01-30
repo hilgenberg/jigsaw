@@ -33,6 +33,7 @@ static void call_java_view(const char *method)
 void call_change_image() { call_java_view("changeImage"); }
 void buy_license()       { call_java_view("buyLicense");  }
 void reload_license()    { call_java_view("reloadLicense");  }
+void send_email()        { call_java_view("sendEmail");  }
 
 bool set_image(const std::string &path)
 {
