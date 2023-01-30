@@ -40,7 +40,7 @@ void GUI::p_preferences()
 	constexpr int NUM_OPTIONS = 6;
 	#endif
 	static const char *s_max_pieces[] = {"Max Pieces: 500", "Max Pieces: 1000", "Max Pieces: 5000", "Max Pieces: 10.000", "Max Pieces: 50.000", "Max Pieces: 100.000", "Max Pieces: 1.000.000"};
-	static const int   n_max_pieces[] = { 500 ,  1000 ,  5000 ,   10000,    50000,    100000,     1000000 };
+	static const int   n_max_pieces[] = {             500 ,              1000 ,              5000 ,               10000,                50000,                100000,                 1000000 };
 	int NN = Preferences::Nmax();
 	for (i = 0; i+1 < NUM_OPTIONS; ++i) if (n_max_pieces[i] >= NN) break;
 	i0 = i;
@@ -48,7 +48,8 @@ void GUI::p_preferences()
 	if (i != i0) Preferences::Nmax(n_max_pieces[i]);
 
 	f0 = Preferences::solution_alpha(); f = f0;
-	ImGui::SliderFloat("##Solution Alpha", &f, 0.0f, 1.0f, "Solution Visibility", ImGuiSliderFlags_Logarithmic|ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_NoInput);
+	ImGui::SliderFloat("##Solution Alpha", &f, 0.0f, 1.0f, "Solution Visibility", //ImGuiSliderFlags_Logarithmic|
+		ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_NoInput);
 	if (f != f0) Preferences::solution_alpha(f);
 
 	b0 = Preferences::absolute_mode(); b = b0;

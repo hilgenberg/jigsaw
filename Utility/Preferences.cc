@@ -262,8 +262,6 @@ static bool save()
 		return false;
 	}
 
-	LOG_DEBUG("Saving preferences...");
-
 	try
 	{
 		FileWriter fw(file);

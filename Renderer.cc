@@ -294,7 +294,8 @@ void Renderer::draw_background()
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture);
 		bg_program.uniform(2, 0); // wants the texture unit, not the texture ID!
-		bg_program.uniform(3, Preferences::solution_alpha());
+		float a = Preferences::solution_alpha();
+		bg_program.uniform(3, a*a);
 		GL_CHECK;
 	}
 	else
