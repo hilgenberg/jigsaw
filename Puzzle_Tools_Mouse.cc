@@ -110,6 +110,9 @@ void shovel_tool(Puzzle &puzzle, Camera &camera, const ScreenCoords &dst, const 
 	}
 	std::sort(P.begin(), P.end(), [&puzzle, &v0, &c, r](int a, int b)
 	{
+		#ifndef NDEBUG
+		(void)r;
+		#endif
 		CameraCoords p1 = puzzle.to_camera(puzzle.pos[a]);
 		CameraCoords p2 = puzzle.to_camera(puzzle.pos[b]);
 		double y1 = (p1-c)*v0; assert(fabs(y1) <= r);

@@ -173,14 +173,20 @@ void Puzzle::pick_up(Piece i)
 
 	if (g[i] < 0)
 	{
-		auto it = std::remove(z.begin(), z.end(), i);
+		#ifndef NDEBUG
+		auto it = 
+		#endif
+		std::remove(z.begin(), z.end(), i);
 		assert(it == z.begin()+N-1);
 		z[N-1] = i;
 	}
 	else
 	{
 		auto &G = groups[g[i]];
-		auto it = std::remove_if(z.begin(), z.end(), [&G](Piece p){ return G.count(p) > 0; });
+		#ifndef NDEBUG
+		auto it = 
+		#endif
+		std::remove_if(z.begin(), z.end(), [&G](Piece p){ return G.count(p) > 0; });
 		assert(it == z.begin()+N-G.size());
 		int k = N-G.size();
 		for (Piece j : G) z[k++] = j;

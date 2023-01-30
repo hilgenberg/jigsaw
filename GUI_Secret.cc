@@ -37,7 +37,10 @@ void GUI::p_secret()
 
 	#ifdef ANDROID
 	if (ImGui::Button("Load Sample Image", ImVec2(ImGui::GetContentRegionAvail().x,0))) {
-		bool ok = set_image("///sample-data");
+		#ifndef NDEBUG
+		bool ok =
+		#endif
+		set_image("///sample-data");
 		assert(ok);
 		close();
 	}

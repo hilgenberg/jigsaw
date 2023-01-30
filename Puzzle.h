@@ -117,7 +117,7 @@ struct Puzzle : public Serializable
 			case Triangle: d1 = 0.15f; d0 = 0.05f; break;
 			case Groove:   d1 = d0 = 0.034f; break;
 			case Circle:   d1 = 0.2f; d0 = 0.0f; break;
-			default: assert(false);
+			default: assert(false); d1 = d0 = 0.0f; break;
 		}
 	}
 

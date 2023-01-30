@@ -20,6 +20,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DANDROID -I${P} -I${imgui} -I${imgui}/b
 -Wno-unknown-pragmas \
 -Wno-implicit-fallthrough \
 -Wno-missing-field-initializers \
+-Wno-unknown-warning-option \
 -fstrict-enums -Wno-reorder -Wno-reorder-ctor \
 -include ${P}/pch.h -Winvalid-pch")
 project(jigsaw)
