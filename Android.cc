@@ -85,7 +85,10 @@ FF(void, reinit, jobject surface, jstring path)
 	delete window;   window   = NULL;
 	if (doc.puzzle.N < 9 && !Preferences::load_state(doc))
 	{
-		bool ok = doc.load("///sample-data", 150);
+		#ifndef NDEBUG
+		bool ok =
+		#endif
+		doc.load("///sample-data", 150);
 		assert(ok);
 	}
 	ANativeWindow *jwin = ANativeWindow_fromSurface(env, surface);
@@ -106,9 +109,9 @@ F(void, pause)
 
 F(jboolean, back)
 {
+	LOCK_RENDERER;
 	if (!window) return false;
-	if (gui.handle_back_button()) return true;
-	return false;
+	return gui.handle_back_button();
 }
 
 F(void, setLicensed)
@@ -135,9 +138,13 @@ FF(jboolean, setImage, jstring path_)
 FF(void, resize, jint w, jint h)
 {
 	LOCK_RENDERER;
-	if (!renderer) return;
+	if (!window) return;
 	SAVE_CALLER;
-	window->reshape(w, h);
+	try {
+		window->reshape(w, h);
+	} catch (...) {
+		LOG_ERROR("Exception in resize(%d, %d)!", w, h);
+	}
 	CLEAR_CALLER;
 }
 
@@ -146,7 +153,11 @@ F(jint, draw)
 	LOCK_RENDERER;
 	if (!renderer) return false;
 	SAVE_CALLER;
-	renderer->draw();
+	try {
+		renderer->draw();
+	} catch (...) {
+		LOG_ERROR("Exception in draw()!");
+	}
 	int ret = (int)doc.needs_redraw() + 2 * (int)pending_vibration;
 	pending_vibration = false;
 	CLEAR_CALLER;
@@ -158,8 +169,12 @@ FF(void, touchUni, jint ds, jint id, jfloat x, jfloat y)
 	LOCK_RENDERER;
 	if (!window) return;
 	SAVE_CALLER;
-	if (gui.handle_touch(ds, 1, &id, &x, &y)) window->handle_touch(-1, 0, NULL,NULL,NULL);
-	else window->handle_touch(ds, 1, &id, &x, &y);
+	try {
+		if (gui.handle_touch(ds, 1, &id, &x, &y)) window->handle_touch(-1, 0, NULL,NULL,NULL);
+		else window->handle_touch(ds, 1, &id, &x, &y);
+	} catch (...) {
+		LOG_ERROR("Exception in touchUni(%d)!", ds);
+	}
 	CLEAR_CALLER;
 }
 
@@ -175,8 +190,12 @@ FF(void, touchMulti, jint ds, jintArray id_, jfloatArray x_, jfloatArray y_)
 	jfloat *x = env->GetFloatArrayElements(x_, NULL);
 	jfloat *y = env->GetFloatArrayElements(y_, NULL);
 	jint  *id = env->GetIntArrayElements (id_, NULL);
-	if (gui.handle_touch(ds, n, id, x, y)) window->handle_touch(-1, 0, NULL,NULL,NULL);
-	else try { window->handle_touch(ds, n, id, x, y); } catch (...) {}
+	try {
+		if (gui.handle_touch(ds, n, id, x, y)) window->handle_touch(-1, 0, NULL,NULL,NULL);
+		else window->handle_touch(ds, n, id, x, y);
+	} catch (...) {
+		LOG_ERROR("Exception in touchMulti(%d, %d)!", ds, n);
+	}
 	env->ReleaseFloatArrayElements(x_, x, JNI_ABORT);
 	env->ReleaseFloatArrayElements(y_, y, JNI_ABORT);
 	env->ReleaseIntArrayElements(id_, id, JNI_ABORT);

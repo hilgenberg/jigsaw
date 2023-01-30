@@ -66,9 +66,9 @@ Renderer::Renderer(Document &doc, Window &window, GUI &gui, ANativeWindow *jni_w
 		#endif
 
 		auto *d = im.redim(w, h * N_BUTTON_IMAGES);
-		for (const auto &t : tmp)
+		if (d) for (const auto &t : tmp)
 		{
-			memcpy(d, t.data().data(), w*h*4);
+			if (t.w() == w && t.h() == h) memcpy(d, t.data().data(), w*h*4);
 			d += w*h*4;
 		}
 
@@ -284,7 +284,7 @@ void Renderer::draw_background()
 	const bool use_image = Preferences::solution_alpha() > 1.0e-5f;
 	glDepthMask(GL_FALSE);
 	glDisable(GL_DEPTH_TEST);
-	bg_program.use(use_image);
+	try{ bg_program.use(use_image); } catch (...) { return; }
 	glBindVertexArray(bg_VAO); // empty but needed
 	bg_program.uniform(0, doc.camera.matrix());
 	bg_program.uniform(1, puzzle.W*puzzle.sx, puzzle.H*puzzle.sy);
@@ -328,7 +328,8 @@ void Renderer::draw_puzzle()
 	const int N = puzzle.N, W = puzzle.W, H = puzzle.H;
 	if (N <= 0) return;
 
-	program.use(Preferences::edge());
+	try{ program.use(Preferences::edge()); } catch(...) { return; }
+
 	glBindVertexArray(VAO[current_buf]);
 	#ifdef LINUX
 	float *data = (float*)glMapNamedBuffer(VBO[current_buf], GL_WRITE_ONLY);
@@ -336,6 +337,7 @@ void Renderer::draw_puzzle()
 	glBindBuffer(GL_ARRAY_BUFFER, VBO[current_buf]);
 	float *data = (float*)glMapBufferRange(GL_ARRAY_BUFFER, 0, VERTEX_DATA_SIZE, GL_MAP_WRITE_BIT);
 	#endif
+	if (!data) { program.finish(); return; }
 
 	unsigned char *d = (unsigned char*)(data+4*current_N);
 	for (int i : reverse(puzzle.z))
@@ -380,7 +382,8 @@ void Renderer::draw_buttons()
 	if (doc.buttons.buttons.empty()) return;
 	assert((int)doc.buttons.buttons.size() <= MAX_BUTTONS);
 
-	button_program.use(1-Preferences::dark_mode());
+	try{ button_program.use(1-Preferences::dark_mode()); } catch(...) { return; }
+
 	glBindVertexArray(button_VAO[current_buf]);
 	#ifdef LINUX
 	float *data = (float*)glMapNamedBuffer(button_VBO[current_buf], GL_WRITE_ONLY);
@@ -388,6 +391,7 @@ void Renderer::draw_buttons()
 	glBindBuffer(GL_ARRAY_BUFFER, button_VBO[current_buf]);
 	float *data = (float*)glMapBufferRange(GL_ARRAY_BUFFER, 0, BUTTON_VERTEX_DATA_SIZE, GL_MAP_WRITE_BIT);
 	#endif
+	if (!data) { button_program.finish(); return; }
 
 	unsigned char *d = (unsigned char*)(data+2*MAX_BUTTONS);
 	for (const auto &b : doc.buttons.buttons)

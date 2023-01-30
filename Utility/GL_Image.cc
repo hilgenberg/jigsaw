@@ -34,7 +34,7 @@ bool GL_Image::load(const std::string &path)
 	}
 
 	unsigned char *d2 = redim(x, y);
-	if (!d2) return false;
+	if (!d2) { stbi_image_free(d1); return false; }
 	memcpy(d2, d1, x*y*4);
 	stbi_image_free(d1);
 	return true;
@@ -55,7 +55,7 @@ bool GL_Image::load(const unsigned char *data, size_t len)
 	}
 
 	unsigned char *d2 = redim(x, y);
-	if (!d2) return false;
+	if (!d2) { stbi_image_free(d1); return false; }
 	memcpy(d2, d1, x*y*4);
 	stbi_image_free(d1);
 	return true;
