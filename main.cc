@@ -28,10 +28,7 @@ int main(int argc, char *argv[])
 {
 	Preferences::reset();
 
-	if (!audio_init(argc, argv))
-	{
-		fprintf(stderr, "ALUT init failed! Audio will be broken.\n");
-	}
+	if (!audio_init(argc, argv)) LOG_ERROR("ALUT init failed! Audio will be broken.");
 
 	const char *file_arg = NULL;
 	int n = -1;
@@ -69,7 +66,7 @@ int main(int argc, char *argv[])
 
 	if (SDL_Init(SDL_INIT_VIDEO) != 0)
 	{
-		fprintf(stderr, "Error: %s\n", SDL_GetError());
+		LOG_ERROR("SDL_Init failed: %s", SDL_GetError());
 		return -1;
 	}
 
@@ -91,7 +88,7 @@ int main(int argc, char *argv[])
 
 	if (glewInit() != GLEW_OK)
 	{
-		fprintf(stderr, "GLEW init failed!\n");
+		LOG_ERROR("GLEW init failed!");
 		SDL_GL_DeleteContext(gl_context);
 		SDL_DestroyWindow(window);
 		SDL_Quit();
@@ -175,7 +172,7 @@ int main(int argc, char *argv[])
 	}
 	catch(std::exception &e)
 	{
-		fprintf(stderr, "%s\n", e.what());
+		LOG_ERROR("%s", e.what());
 		retcode = 2;
 	}
 

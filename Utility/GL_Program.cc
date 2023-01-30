@@ -50,7 +50,7 @@ static GLuint compileShader(const std::string &src, GLuint type)
 	{
 		char info[1024];
 		glGetShaderInfoLog(shader, 1024, NULL, info);
-		std::cerr << "ERROR: Shader compilation failed!\n" << info << std::endl;
+		LOG_ERROR("Shader compilation failed: %s", info);
 		glDeleteShader(shader);
 		throw std::runtime_error(info);
 	}
@@ -121,7 +121,7 @@ void GL_Program::use(int i)
 		{
 			char info[1024];
 			glGetProgramInfoLog(program, 1024, NULL, info);
-			std::cerr << "ERROR: Shader linking failed!\n" << info << std::endl;
+			LOG_ERROR("Shader linking failed: %s", info);
 			throw std::runtime_error(info);
 		}
 

@@ -104,8 +104,6 @@ bool Window::handle_event(const SDL_Event &e)
 			if (va || dragging < -1) return true;
 
 			auto buttons = e.motion.state;
-			//static int i = 0; ++i; i %=10;
-			//std::cout << i << "B " << buttons << std::endl;
 			if (!(buttons & (SDL_BUTTON_LMASK|SDL_BUTTON_RMASK|SDL_BUTTON_MMASK))) return true;
 			
 			double dx = e.motion.xrel, dy = e.motion.yrel, dz = 0.0;

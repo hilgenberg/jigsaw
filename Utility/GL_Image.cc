@@ -45,7 +45,7 @@ bool GL_Image::load(const unsigned char *data, size_t len)
 	unsigned char *d1 = stbi_load_from_memory(data, (int)len, &x, &y, &n, 4);
 	if (!d1)
 	{
-		fprintf(stderr, "Error parsing image data: %s\n", stbi_failure_reason());
+		LOG_ERROR("Error parsing image data: %s", stbi_failure_reason());
 		return false;
 	}
 	if (x <= 0 || y <= 0 || n <= 0)

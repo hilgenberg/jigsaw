@@ -2,7 +2,7 @@
 
 Histogram::Histogram(const GL_Image &im, int W, int H)
 {
-	std::cout << "analyzing image..." << std::endl;
+	LOG_DEBUG("analyzing image...");
 	hist.resize(W*H); for (auto &h : hist) h.fill(0);
 	total.resize(W*H, 0); unit.resize(W*H, 0.0);
 	const unsigned char *data = im.data().data();
@@ -17,7 +17,6 @@ Histogram::Histogram(const GL_Image &im, int W, int H)
 			assert(g >= 0 && g < 4);
 			assert(b >= 0 && b < 4);
 			int bin = (r<<4) + (g<<2) + b;
-			//std::cout << "bin " << bin << ", " << r << ", " << g << ", " << b << std::endl;
 			assert(bin >= 0 && bin < 64);
 			++hist[k][bin];
 			++total[k];
@@ -36,7 +35,7 @@ Histogram::Histogram(const GL_Image &im, int W, int H)
 			unit[j*W+i] = sqrt(sum);
 		}
 	}
-	std::cout << "...done" << std::endl;
+	LOG_DEBUG("...done");
 }
 
 double Histogram::distance(Piece i, Piece j) const

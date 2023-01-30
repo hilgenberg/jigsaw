@@ -9,7 +9,7 @@ static ALuint buffer = 0, source = 0;
 
 #define TEST_ERROR(_msg) do {\
 	ALCenum error = alGetError();\
-	if (error != AL_NO_ERROR) fprintf(stderr, "OpenAL Error: " _msg "\n");\
+	if (error != AL_NO_ERROR) LOG_ERROR("OpenAL Error: " _msg );\
 	}while(0)
 
 bool audio_init(int &argc, char **argv)

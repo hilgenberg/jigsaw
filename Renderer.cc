@@ -316,7 +316,6 @@ void Renderer::draw_background()
 		bg_program.uniform(6, c2);
 	}
 	GL_CHECK;
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	glBindVertexArray(0);
 	bg_program.finish();
@@ -499,14 +498,10 @@ void Renderer::draw()
 	GL_CHECK;
 	if (camera.empty()) return;
 
-	draw_background();
-	GL_CHECK;
-	draw_puzzle();
-	GL_CHECK;
-	draw_buttons();
-	GL_CHECK;
-	draw_gui();
-	GL_CHECK;
+	draw_background(); GL_CHECK;
+	draw_puzzle();     GL_CHECK;
+	draw_buttons();    GL_CHECK;
+	draw_gui();        GL_CHECK;
 
 	++current_buf; current_buf %= 2;
 }

@@ -219,7 +219,6 @@ void Puzzle::move(Piece i, const PuzzleCoords &p, bool animate)
 
 void Puzzle::animate(double dt)
 {
-	//std::cout << "anim " << animations.size() << ", "  << dt << std::endl;
 	for (auto it = animations.begin(); it != animations.end();)
 	{
 		Piece i = it->first;
