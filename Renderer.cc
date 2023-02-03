@@ -30,6 +30,9 @@ Renderer::Renderer(Document &doc, Window &window, GUI &gui, ANativeWindow *jni_w
 #ifdef ANDROID
 , context(eglGetCurrentContext())
 , jni_window(jni_window)
+#else
+, sdl_window(sdl_window)
+, sdl_context(sdl_context)
 #endif
 {
 	#ifdef ANDROID
@@ -146,6 +149,16 @@ Renderer::Renderer(Document &doc, Window &window, GUI &gui, ANativeWindow *jni_w
 
 	glBindVertexArray(0);
 
+	#ifdef LINUX
+	init_gui();
+	#endif
+}
+
+void Renderer::init_gui()
+{
+	if (gui_init_done) return;
+	gui_init_done = true;
+
 	//----------------------------------------------------------------------------
 	// Dear ImGui setup
 	//----------------------------------------------------------------------------
@@ -168,9 +181,11 @@ Renderer::Renderer(Document &doc, Window &window, GUI &gui, ANativeWindow *jni_w
 	#endif
 
 	ImFontConfig fc; fc.FontDataOwnedByAtlas = false;
-	static const ImWchar ranges[] = { 0x0001, 0xFFFF, 0 }; // get all
-	io.Fonts->AddFontFromMemoryTTF((void *)font_data, (int)font_data_len, font_size, &fc, ranges);
-
+	//static const ImWchar ranges[] = { 0x0001, 0xFFFF, 0 }; // get all
+	io.Fonts->AddFontFromMemoryTTF((void *)font_data, (int)font_data_len, font_size, &fc, 
+	io.Fonts->GetGlyphRangesDefault()
+	//ranges
+	);
 	auto &style = ImGui::GetStyle();
 	style.FrameRounding = 3.0f;
 	style.WindowRounding = 5.0f;
@@ -217,15 +232,18 @@ void Renderer::alloc_puzzle_VOs(bool free_old_buffers)
 
 Renderer::~Renderer()
 {
-	#ifdef LINUX
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplSDL2_Shutdown();
-	#else
-	if (eglGetCurrentContext() == context) ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplAndroid_Shutdown();
-	ANativeWindow_release(jni_window);
-	#endif
-	ImGui::DestroyContext();
+	if (gui_init_done)
+	{
+		#ifdef LINUX
+		ImGui_ImplOpenGL3_Shutdown();
+		ImGui_ImplSDL2_Shutdown();
+		#else
+		if (eglGetCurrentContext() == context) ImGui_ImplOpenGL3_Shutdown();
+		ImGui_ImplAndroid_Shutdown();
+		ANativeWindow_release(jni_window);
+		#endif
+		ImGui::DestroyContext();
+	}
 
 	#ifdef ANDROID
 	if (eglGetCurrentContext() != context)
@@ -439,7 +457,7 @@ void Renderer::draw_buttons()
 void Renderer::draw_gui()
 {
 	#ifdef LINUX
-	if (ImGui::GetIO().MouseDrawCursor != gui.visible)
+	if (gui_init_done && ImGui::GetIO().MouseDrawCursor != gui.visible)
 	{
 		ImGui::GetIO().MouseDrawCursor = gui.visible;
 
@@ -460,6 +478,8 @@ void Renderer::draw_gui()
 	else
 	#endif
 	if (!gui.visible) return;
+
+	if (!gui_init_done) init_gui();
 
 	ImGui_ImplOpenGL3_NewFrame();
 	#ifdef LINUX

@@ -185,7 +185,7 @@ bool GUI::handle_event(const SDL_Event &event)
 #else
 bool GUI::handle_touch(int ds, int n, int *id, float *x, float *y)
 {
-	if (activate_secret_menu(ds, n, id, x, y)) { return true; liftoff = 0; }
+	if (activate_secret_menu(ds, n, id, x, y)) { liftoff = 0; return true; }
 	if (!visible) return false;
 	if (page == HELP) return false;
 	doc.redraw(3);

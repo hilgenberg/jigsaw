@@ -33,6 +33,9 @@ private:
 	#ifdef ANDROID
 	const EGLContext context; // which GL context do all our objects live in?
 	ANativeWindow *jni_window = NULL; // only to call ANativeWindow_release on it
+	#else
+	SDL_Window   *sdl_window = NULL;
+	SDL_GLContext sdl_context = 0;
 	#endif
 	
 	void alloc_puzzle_VOs(bool free_old_buffers); // realloc when puzzle.N changes
@@ -42,8 +45,10 @@ private:
 	void draw_buttons();
 	void draw_gui();
 
-	int current_buf = 0; // we use double buffering for data to avoid stalls in glMap
-	int current_N = 0; // from last alloc_puzzle_VOs call
+	int  current_buf = 0; // we use double buffering for data to avoid stalls in glMap
+	int  current_N = 0; // from last alloc_puzzle_VOs call
+	bool gui_init_done = false;
+	void init_gui();
 
 	GL_Program program;
 	GLuint VBO[2] = {0,0}, VAO[2] = {0,0};
