@@ -217,6 +217,7 @@ static bool load()
 		s.string_(image_);
 		#endif
 		s.float_ (solution_alpha_);
+		if (s.version() >= FILE_VERSION_1_1) bg_color_.load(s);
 		s.bool_  (absolute_mode_);
 		s.bool_  (spiral_);
 		s.enum_  (edge_, None, Circle);
@@ -271,6 +272,7 @@ static bool save()
 		s.string_(image_);
 		#endif
 		s.float_ (solution_alpha_);
+		if (s.version() >= FILE_VERSION_1_1) bg_color_.save(s);
 		s.bool_  (absolute_mode_);
 		s.bool_  (spiral_);
 		s.enum_  ((int)edge_, None, Circle);

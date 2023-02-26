@@ -2,7 +2,8 @@
 
 //  All released versions as major<<16 + minor
 #define FILE_VERSION_1_0  0x00010000U
-#define CURRENT_VERSION  FILE_VERSION_1_0
+#define FILE_VERSION_1_1  0x00010001U
+#define CURRENT_VERSION  FILE_VERSION_1_1
 
 inline const char *version_string(unsigned v)
 {
