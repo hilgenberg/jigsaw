@@ -8,7 +8,6 @@ import java.io.File
 class MainActivity : Activity()
 {
 	private lateinit var view: PuzzleView
-	private var license: License? = null
 
 	override fun onCreate(b: Bundle?) {
 		super.onCreate(b)
@@ -17,18 +16,6 @@ class MainActivity : Activity()
 		setContentView(view)
 		view.requestRender()
 	}
-
-	fun checkLicense() : Boolean?
-	{
-		if (license == null) license = License(this)
-		return license!!.check()
-	}
-	fun buyLicense()
-	{
-		if (license == null) license = License(this)
-		license!!.buy()
-	}
-	fun licenseChanged() { view.licenseChanged() }
 
 	override fun onResume() {
 		super.onResume()

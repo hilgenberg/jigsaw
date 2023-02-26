@@ -4,15 +4,14 @@
 
 const char *Buttons::Button::help() const
 {
-	#define LIC(x) (license() ? x : x " ($)")
 	switch (index)
 	{
 	case ARRANGE:      return "Arrange pieces";
-	case EDGE_ARRANGE: return LIC("Find edge pieces");
+	case EDGE_ARRANGE: return "Find edge pieces";
 	case RESET_VIEW:   return "Zoom to show all";
-	case HIDE:         return LIC("Hide pieces");
-	case SHOVEL:       return LIC("Move multiple pieces");
-	case MAGNET:       return LIC("Magnetize piece");
+	case HIDE:         return "Hide pieces";
+	case SHOVEL:       return "Move multiple pieces";
+	case MAGNET:       return "Magnetize piece";
 	case CHANGE_IMAGE: return "Change image";
 	case SETTINGS:     return "Puzzle settings";
 	case PREFERENCES:  return "App preferences";
@@ -30,7 +29,11 @@ void Buttons::reshape(Camera &camera)
 	if (w*0.5f*W < 32) w = 64.0/W;
 	float h = w, spc = h*0.5f;
 	if (W < H) h = w*W/H; else w = h*H/W;
-	const int nspc = 2, nb = 10 - Preferences::hide_help();
+	const int nspc = 2, nb = 10 - Preferences::hide_help()
+	#ifndef ANDROID
+	- 1 // change image button is only on android
+	#endif
+	;
 	ScreenCoords p(0.0, 0.0), dp(0.0, 0.0), ds(0.0, 0.0);
 
 	switch (Preferences::button_edge())
@@ -104,7 +107,9 @@ void Buttons::reshape(Camera &camera)
 	B(ARRANGE);
 	B(EDGE_ARRANGE);
 	p += ds;
+	#ifdef ANDROID
 	B(CHANGE_IMAGE);
+	#endif
 	B(SETTINGS);
 	B(PREFERENCES);
 	if (!Preferences::hide_help()) B(HELP);

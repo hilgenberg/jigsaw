@@ -31,26 +31,14 @@ static bool        click_          = true;
 static bool        hide_help_      = false;
 #ifdef ANDROID
 static bool        vibrate_        = false;
-static bool        cached_license_ = false;
 static bool        adaptive_touch_ = true;
-#endif
-
-#ifdef ANDROID
-bool ugly = false;
-double ugly_start_time = -1.0;
-bool license()
-{
-	if (Preferences::cached_license()) return true;
-	if (ugly && now() > ugly_start_time + 24*3600.0) ugly = false;
-	return ugly;
-}
 #endif
 
 static path cfg;
 
 namespace Preferences
 {
-	void reset_to_factory(bool keep_license)
+	void reset_to_factory()
 	{
 		#ifdef LINUX
 		pieces_         = 256;
@@ -70,7 +58,6 @@ namespace Preferences
 		hide_help_      = false;
 		#ifdef ANDROID
 		vibrate_        = false;
-		if (!keep_license) cached_license_ = false;
 		adaptive_touch_ = true;
 		#endif
 	}
@@ -185,7 +172,6 @@ namespace Preferences
 	PREFV(bool,        hide_help);
 	#ifdef ANDROID
 	PREFV(bool,        vibrate);
-	PREFV(bool,        cached_license);
 	PREFV(bool,        adaptive_touch);
 	#endif
 };
@@ -230,7 +216,7 @@ static bool load()
 		s.bool_  (hide_help_);
 		#ifdef ANDROID
 		s.bool_  (vibrate_);
-		int tmp; s.int32_ (tmp); cached_license_ = (tmp == 0x00040005);
+		if (s.version() < FILE_VERSION_1_1) { int license; s.int32_(license); }
 		s.bool_  (adaptive_touch_);
 		#endif
 	}
@@ -285,7 +271,7 @@ static bool save()
 		s.bool_  (hide_help_);
 		#ifdef ANDROID
 		s.bool_  (vibrate_);
-		s.int32_ (cached_license_ ? 0x00040005 : 0x00010000);
+		if (s.version() < FILE_VERSION_1_1) s.int32_(true /*cached_license_*/ ? 0x00040005 : 0x00010000);
 		s.bool_  (adaptive_touch_);
 		#endif
 	}

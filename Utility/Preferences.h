@@ -37,7 +37,7 @@ namespace Preferences
 {
 	bool flush(); // store changes into registry/ini file
 	bool reset(); // reread from registry/disk
-	void reset_to_factory(bool keep_license = true);
+	void reset_to_factory();
 
 	bool save_state(const Document &doc);
 	bool load_state(      Document &doc);
@@ -69,7 +69,6 @@ namespace Preferences
 	PREFV(bool,        hide_help);
 	#ifdef ANDROID
 	PREFV(bool,        vibrate);
-	PREFV(bool,        cached_license);
 	PREFV(bool,        adaptive_touch);
 	#endif
 
@@ -80,11 +79,7 @@ namespace Preferences
 };
 
 #ifdef LINUX
-inline constexpr bool license() { return true; }
-inline void buy_license() {}
 inline void send_email() {}
 #else
-extern bool license(); // is this the full version?
-extern void buy_license(); // in Android.cc
 extern void send_email(); // in Android.cc
 #endif

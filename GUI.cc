@@ -18,7 +18,6 @@ void GUI::init_page()
 	{
 		case PREFERENCES: break;
 		case SETTINGS: tmp_N = -1.0; break;
-		case DIALOG: dlg = 0; trail.clear(); break;
 		case SECRET_MENU: break;
 		case HELP: break;
 		default: assert(false);
@@ -45,10 +44,9 @@ void GUI::draw()
 	ImGui::GetStyle().FrameBorderSize = dark ? 0.0f : 1.0f;
 
 	ImGuiViewport &screen = *ImGui::GetMainViewport();
-	ImGui::SetNextWindowBgAlpha(page==DIALOG ? 0.8f : 0.75f);
+	ImGui::SetNextWindowBgAlpha(0.75f);
 	ImVec2 center = screen.GetCenter();
-	ImGui::SetNextWindowPos(center, page==DIALOG ? ImGuiCond_Always : ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-	//ImGui::SetNextWindowSize(screen.WorkSize, ImGuiCond_Always);
+	ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
 	if (page == HELP) 
 		p_help();
@@ -63,7 +61,6 @@ void GUI::draw()
 		{
 			case PREFERENCES: p_preferences(); break;
 			case SETTINGS:    p_settings();    break;
-			case DIALOG:      p_dialog();      break;
 			case SECRET_MENU: p_secret();      break;
 			case HELP:        assert(false);   break;
 		}
@@ -157,9 +154,6 @@ bool GUI::handle_event(const SDL_Event &event)
 				show_demo_window = !show_demo_window;
 				doc.redraw(3);
 				return true;
-			case SDLK_f:
-				show(DIALOG);
-				return true;
 			#endif
 		}
 	}
@@ -200,14 +194,6 @@ bool GUI::handle_touch(int ds, int n, int *id, float *x, float *y)
 bool GUI::handle_back_button()
 {
 	if (!visible) return false;
-	if (page == DIALOG && trail.size() >= 2)
-	{
-		assert(dlg == trail.back());
-		trail.pop_back();
-		dlg = trail.back(); // no need to pop it, would only get re-pushed
-		doc.redraw(3);
-		return true;
-	}
 	close();
 	return true;
 }

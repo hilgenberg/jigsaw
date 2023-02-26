@@ -15,11 +15,6 @@ import javax.microedition.khronos.opengles.GL10
 
 internal class PuzzleView(val context: Application, val activity: MainActivity) : GLSurfaceView(context)
 {
-	enum class LicState {
-		UNKNOWN, YES, PENDING_QUERY, NO
-	}
-	private var lic: LicState = LicState.UNKNOWN
-
 	init {
 		setEGLConfigChooser(8, 8, 8, 0, 8, 0)
 		setEGLContextClientVersion(3)
@@ -28,28 +23,11 @@ internal class PuzzleView(val context: Application, val activity: MainActivity) 
 				val r = draw()
 				if (r and 1 != 0) requestRender()
 				if (r and 2 != 0) vibrate()
-
-				if (lic == LicState.UNKNOWN)
-				{
-					lic = if (findCachedLicense()) LicState.YES else LicState.PENDING_QUERY
-				}
-				if (lic == LicState.PENDING_QUERY) when (activity.checkLicense())
-				{
-					null -> {}
-					true -> { setLicensed(); lic = LicState.YES }
-					false -> lic = LicState.NO
-				}
 			}
 			override fun onSurfaceChanged(gl: GL10, w: Int, h: Int) { resize(w, h); requestRender() }
 			override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
 				reinit(holder.surface, context.filesDir.path)
 				requestRender()
-				// recheck license - we might have come back from the buy flow
-				if (lic == LicState.NO && activity.checkLicense() == true)
-				{
-					setLicensed()
-					lic = LicState.YES
-				}
 			}
 		})
 		renderMode = RENDERMODE_WHEN_DIRTY
@@ -120,31 +98,6 @@ internal class PuzzleView(val context: Application, val activity: MainActivity) 
 		}
 	}
 
-	fun buyLicense()
-	{
-		if (lic != LicState.NO)
-		{
-			Log.e("JIGSAW", "Trying to buy license prematurely!")
-			return
-		}
-		Log.d("JIGSAW", "Trying to buy license...")
-		activity.buyLicense()
-	}
-	fun reloadLicense()
-	{
-		// only for debugging!
-		Log.d("JIGSAW", "Reloading license")
-		lic = LicState.UNKNOWN
-	}
-	fun licenseChanged()
-	{
-		if (lic == LicState.NO && activity.checkLicense() == true)
-		{
-			setLicensed()
-			lic = LicState.YES
-		}
-	}
-
 	fun vibrate()
 	{
 		@Suppress("OverridingDeprecatedMember", "DEPRECATION")
@@ -161,8 +114,6 @@ internal class PuzzleView(val context: Application, val activity: MainActivity) 
 	public  external fun setImage(path: String) : Boolean
 	private external fun pause()
 	public  external fun back() : Boolean
-	private external fun setLicensed()
-	private external fun findCachedLicense() : Boolean
 	private external fun draw() : Int
 	private external fun resize(width: Int, height: Int)
 	private external fun touchUni(ds: Int, id: Int, x: Float, y: Float)

@@ -114,29 +114,22 @@ void Window::play_victory_animation()
 
 void Window::button_action(ButtonAction a)
 {
-	#ifdef ANDROID
-	#define LIC_CHK if (!license()) { doc.tool = Tool::NONE; gui.show(GUI::DIALOG); } else
-	#else
-	#define LIC_CHK
-	#endif
 	switch (a)
 	{
 		case ARRANGE:      arrange(doc.puzzle, false, true, doc.tool == Tool::HIDE); start_animations(); break;
-		case EDGE_ARRANGE: LIC_CHK{ arrange(doc.puzzle, true, true, doc.tool == Tool::HIDE); start_animations(); } break;
+		case EDGE_ARRANGE: arrange(doc.puzzle, true, true, doc.tool == Tool::HIDE); start_animations(); break;
 		case RESET_VIEW:   reset_view(doc.puzzle, doc.camera); break;
 		case CHANGE_IMAGE:
-			#ifdef LINUX
-			gui.show(GUI::DIALOG);
-			#else
+			#ifdef ANDROID
 			call_change_image();
 			#endif
 			break;
 		case SETTINGS:     gui.show(GUI::SETTINGS); break;
 		case PREFERENCES:  gui.show(GUI::PREFERENCES); break;
 		case HELP:         gui.show(GUI::HELP); break;
-		case HIDE:   LIC_CHK doc.tool = (doc.tool==Tool::HIDE   ? Tool::NONE : Tool::HIDE);   break;
-		case SHOVEL: LIC_CHK doc.tool = (doc.tool==Tool::SHOVEL ? Tool::NONE : Tool::SHOVEL); break;
-		case MAGNET: LIC_CHK doc.tool = (doc.tool==Tool::MAGNET ? Tool::NONE : Tool::MAGNET); break;
+		case HIDE:         doc.tool = (doc.tool==Tool::HIDE   ? Tool::NONE : Tool::HIDE);   break;
+		case SHOVEL:       doc.tool = (doc.tool==Tool::SHOVEL ? Tool::NONE : Tool::SHOVEL); break;
+		case MAGNET:       doc.tool = (doc.tool==Tool::MAGNET ? Tool::NONE : Tool::MAGNET); break;
 		default: assert(false); return;
 	}
 	doc.redraw();

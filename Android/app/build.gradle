@@ -51,6 +51,5 @@ dependencies {
     implementation 'com.google.oboe:oboe:1.7.0'
     implementation 'androidx.core:core-ktx:1.9.0'
     implementation 'com.google.android.material:material:1.7.0'
-    implementation 'com.android.billingclient:billing:5.1.0'
 }
 

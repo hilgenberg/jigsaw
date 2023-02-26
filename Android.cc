@@ -31,11 +31,7 @@ static void call_java_view(const char *method)
 }
 
 void call_change_image() { call_java_view("changeImage"); }
-void buy_license()       { call_java_view("buyLicense");  }
 void send_email()        { call_java_view("sendEmail");  }
-#ifdef DEBUG
-void reload_license()    { call_java_view("reloadLicense");  }
-#endif
 
 bool set_image(const std::string &path)
 {
@@ -112,16 +108,6 @@ F(jboolean, back)
 	LOCK_RENDERER;
 	if (!window) return false;
 	return gui.handle_back_button();
-}
-
-F(void, setLicensed)
-{
-	Preferences::cached_license(true);
-	Preferences::flush();
-}
-F(bool, findCachedLicense)
-{
-	return Preferences::cached_license();
 }
 
 FF(jboolean, setImage, jstring path_)

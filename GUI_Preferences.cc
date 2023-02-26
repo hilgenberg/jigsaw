@@ -130,19 +130,7 @@ void GUI::p_preferences()
 	ImGui::Checkbox("Adaptive Hit Test", &b);
 	if (b != b0) Preferences::adaptive_touch(b);
 	Help("Keeps track of where you tend to grab the pieces (like mostly on their bottom-right, f.e.) and favors the pieces near that position. If you want to train it, pick up some lone piece about 5 times the way you want it to think is optimal.");
-
-	if (!Preferences::cached_license())
-	{
-		SPC;
-
-		if (ImGui::Button("Upgrade to Full Version", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
-		{
-			close();
-			buy_license();
-		}
-	}
 	#endif
-
 
 	SPC;
 
@@ -151,12 +139,14 @@ void GUI::p_preferences()
 		Preferences::flush();
 		close();
 	}
+	#ifdef ANDROID
 	if (ImGui::Button("Contact Developer", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
 	{
 		Preferences::flush();
 		close();
 		send_email();
 	}
+	#endif
 
 	ImGui::PopItemWidth();
 }

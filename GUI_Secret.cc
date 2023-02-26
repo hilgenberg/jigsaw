@@ -25,10 +25,6 @@ bool GUI::activate_secret_menu(int ds, int n, int *id, float *x, float *y)
 
 extern bool set_image(const std::string &path);
 
-#ifdef DEBUG
-extern void reload_license();
-extern bool ugly; extern double ugly_start_time;
-#endif
 #endif
 
 void GUI::p_secret()
@@ -50,7 +46,6 @@ void GUI::p_secret()
 		close();
 	}
 	#endif
-	if (ImGui::Button("Run Dialog Again", ImVec2(ImGui::GetContentRegionAvail().x,0))) show(DIALOG);
 
 	#if defined(ANDROID) && defined(DEBUG)
 	if (ImGui::Button("Reset Preferences", ImVec2(ImGui::GetContentRegionAvail().x,0)))
@@ -58,21 +53,6 @@ void GUI::p_secret()
 		Preferences::reset_to_factory();
 		doc.buttons.reshape(doc.camera);
 		doc.redraw();
-	}
-
-	bool b0 = Preferences::cached_license(), b = b0;
-	ImGui::Checkbox("Cached License (Debug!)", &b);
-	if (b != b0)
-	{
-		Preferences::cached_license(b);
-		reload_license();
-	}
-	b0 = ugly; b = b0;
-	ImGui::Checkbox("Ugly License (Debug!)", &b);
-	if (b != b0)
-	{
-		ugly = b;
-		if (b) ugly_start_time = now();
 	}
 	#endif
 
