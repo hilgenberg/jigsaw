@@ -9,9 +9,6 @@ extern Window *window;
 bool GUI::activate_secret_menu(int ds, int n, int *id, float *x, float *y)
 {
 	if (n != 4) return false;
-	#ifndef DEBUG
-	if (!Preferences::cached_license()) return false; // ignore the ugly flag
-	#endif
 	const int w = doc.camera.screen_w(), h = doc.camera.screen_h();
 	const int s = std::min(w/4, h/4); if (s < 10) return false;
 	int i;
